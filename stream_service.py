@@ -1,27 +1,27 @@
-from fastapi import FastAPI, WebSocket
+import sys
+import json
 from cosyvoice.cli.cosyvoice import AutoModel
 
-app = FastAPI()
+cosyvoice = AutoModel(
+    model_dir="/home/ec2-user/CosyVoice/pretrained_models/CosyVoice-300M",
+    load_jit=True,
+    load_trt=True,
+    load_vllm=True,
+    fp16=True,
+)
 
-# 初始化 CosyVoice 模型，确保使用本地模型路径
-cosyvoice = AutoModel(model_dir='/home/ec2-user/CosyVoice/pretrained_models/CosyVoice-300M', load_jit=True, load_trt=True, load_vllm=True, fp16=True)
+print("CosyVoice service ready", flush=True)
 
-@app.websocket("/stream")
-async def stream(websocket: WebSocket):
-    await websocket.accept()
-    try:
-        while True:
-            # 接收客户端发送的文本
-            data = await websocket.receive_text()
-            speaker = "中文女"  # 您可以根据需求动态设置
-            # 流式生成语音
-            for i, result in enumerate(cosyvoice.inference_sft(data, speaker, stream=True)):
-                # 将生成的音频块发送给客户端
-                await websocket.send_bytes(result['tts_speech'].numpy().tobytes())
-    except Exception as e:
-        print(f"连接关闭：{e}")
-        await websocket.close()
+for line in sys.stdin:
+    req = json.loads(line)
+    text = req["text"]
+    speaker = req.get("speaker", "中文女")
 
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=50000)
+    for result in cosyvoice.inference_sft(text, speaker, stream=True):
+        audio = result["tts_speech"].numpy().tobytes()
+        sys.stdout.buffer.write(audio)
+        sys.stdout.flush()
+
+    # chunk 结束标记
+    sys.stdout.buffer.write(b"__END__")
+    sys.stdout.flush()
