@@ -11,6 +11,10 @@ conda activate cosyvoice
 # 明确 GPU（避免 systemd 环境不一致）
 export CUDA_VISIBLE_DEVICES=0
 
+# 🔴 关键修正
+export PYTORCH_NO_MMAP=1
+export MALLOC_ARENA_MAX=4
+
 cd /home/ec2-user/CosyVoice
 
 exec python stream_service.py
