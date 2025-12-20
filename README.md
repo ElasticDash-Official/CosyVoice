@@ -101,6 +101,9 @@
     conda activate cosyvoice
     pip install -r requirements.txt -i https://mirrors.aliyun.com/pypi/simple/ --trusted-host=mirrors.aliyun.com
 
+    # No deepspeed as no training at this point
+    pip uninstall -y deepspeed
+
     # If you encounter sox compatibility issues
     # ubuntu
     sudo apt-get install sox libsox-dev

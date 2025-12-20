@@ -3,11 +3,7 @@ import json
 from cosyvoice.cli.cosyvoice import AutoModel
 
 cosyvoice = AutoModel(
-    model_dir="/home/ec2-user/CosyVoice/pretrained_models/Fun-CosyVoice3-0.5B",
-    load_jit=True,
-    load_trt=True,
-    load_vllm=True,
-    fp16=True,
+    model_dir="/home/ec2-user/CosyVoice/pretrained_models/Fun-CosyVoice3-0.5B"
 )
 
 print("CosyVoice service ready", flush=True)
