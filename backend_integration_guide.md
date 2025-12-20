@@ -5,7 +5,7 @@ This document provides instructions on how to integrate your backend program wit
 ---
 
 ## 1. Overview
-The `stream_service.py` script sets up a WebSocket-based streaming service using FastAPI. Clients can send text data to the server, and the server will respond with audio data in real-time.
+The `stream_service.py` script sets up a streaming service that communicates via standard input and output. Clients can send text data to the service through standard input, and the service will respond with audio data through standard output.
 
 ### Key Features:
 - Real-time TTS generation.
@@ -21,71 +21,93 @@ The `stream_service.py` script sets up a WebSocket-based streaming service using
    - Ensure Python 3.8+ is installed.
    - Install required dependencies:
      ```bash
-     pip install fastapi uvicorn
+     pip install -r requirements.txt
      ```
 2. **CosyVoice Dependencies**:
-   - Install all dependencies listed in `requirements.txt`.
-   - Ensure the `pretrained_models` directory contains the required models (e.g., `CosyVoice-300M`).
+   - Ensure the `pretrained_models` directory contains the required models (e.g., `Fun-CosyVoice3-0.5B`).
 3. **CUDA (Optional)**:
    - If using GPU acceleration, ensure CUDA and TensorRT are properly installed.
 
 ### Starting the Service:
-Run the following command to start the WebSocket server:
+Run the following command to start the service:
 ```bash
-uvicorn stream_service:app --host 0.0.0.0 --port 50000
+python stream_service.py
 ```
 
-The server will be accessible at `ws://<server_ip>:50000/stream`.
+The service will be ready to receive requests via standard input.
 
 ---
 
 ## 3. Client Integration
 
-### WebSocket Communication
-Clients can connect to the WebSocket endpoint `/stream` to send text data and receive audio data.
+### Standard Input/Output Communication
+Clients can interact with the service by sending JSON requests through standard input and receiving audio data through standard output.
 
 #### Example Client Code (Python):
 ```python
-import asyncio
-import websockets
+import subprocess
+import json
 
-async def stream_audio():
-    uri = "ws://<server_ip>:50000/stream"
-    async with websockets.connect(uri) as websocket:
-        # Send text data to the server
-        await websocket.send("你好，我是通义生成式语音大模型。")
+def send_request_to_service(text, speaker="中文女"):
+    # Start the service process
+    process = subprocess.Popen(
+        ["python", "stream_service.py"],
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        bufsize=1
+    )
 
-        # Receive streamed audio data
-        with open("output.wav", "wb") as f:
-            while True:
-                try:
-                    audio_chunk = await websocket.recv()
-                    f.write(audio_chunk)
-                except websockets.exceptions.ConnectionClosed:
-                    print("Connection closed")
-                    break
+    # Construct the request
+    request = json.dumps({"text": text, "speaker": speaker}) + "\n"
 
-asyncio.run(stream_audio())
+    # Send the request to the service
+    process.stdin.write(request)
+    process.stdin.flush()
+
+    # Receive the audio data
+    audio_data = b""
+    while True:
+        chunk = process.stdout.buffer.read(1024)
+        if b"__END__" in chunk:
+            audio_data += chunk.replace(b"__END__", b"")
+            break
+        audio_data += chunk
+
+    # Close the service process
+    process.stdin.close()
+    process.terminate()
+
+    return audio_data
+
+# Example usage
+audio = send_request_to_service("你好，我是通义生成式语音大模型。")
+with open("output.wav", "wb") as f:
+    f.write(audio)
 ```
 
 ### Notes:
-- Replace `<server_ip>` with the actual IP address or domain of your server.
-- The server sends audio data in chunks. Ensure the client writes the received data to a file or processes it in real-time.
+- Ensure the `stream_service.py` script is in the same directory as the client code, or adjust the path accordingly.
+- The service sends audio data in chunks. Ensure the client writes the received data to a file or processes it in real-time.
 
 ---
 
 ## 4. Customization
 
 ### Changing the Speaker
-The default speaker is set to `"中文女"`. You can modify this in the `stream_service.py` script:
-```python
-speaker = "中文女"  # Change this to your desired speaker
+The default speaker is set to `"中文女"`. You can modify this in the client request:
+```json
+{
+  "text": "你好，我是通义生成式语音大模型。",
+  "speaker": "中文男"
+}
 ```
 
 ### Using a Different Model
-To use a different pretrained model, update the `model_dir` parameter in the script:
+To use a different pretrained model, update the `model_dir` parameter in the `stream_service.py` script:
 ```python
-cosyvoice = AutoModel(model_dir='pretrained_models/YourModelName', ...)
+cosyvoice = AutoModel(model_dir='/path/to/your/model', ...)
 ```
 
 ---
@@ -93,23 +115,20 @@ cosyvoice = AutoModel(model_dir='pretrained_models/YourModelName', ...)
 ## 5. Troubleshooting
 
 ### Common Issues:
-1. **WebSocket Connection Fails**:
-   - Ensure the server is running and the port (default: 50000) is open in the firewall/security group.
+1. **Service Not Responding**:
+   - Ensure the `stream_service.py` script is running.
+   - Check the service logs for errors.
 2. **Audio Data Not Received**:
-   - Check the server logs for errors.
    - Ensure the `pretrained_models` directory contains the required models.
+   - Verify that the client is correctly handling the `__END__` marker.
 3. **Performance Issues**:
    - Use GPU acceleration for better performance.
-   - Increase the number of workers when starting the server:
-     ```bash
-     uvicorn stream_service:app --host 0.0.0.0 --port 50000 --workers 4
-     ```
+   - Ensure sufficient system resources are available.
 
 ---
 
 ## 6. Additional Resources
-- [FastAPI Documentation](https://fastapi.tiangolo.com/)
-- [WebSocket Protocol](https://developer.mozilla.org/en-US/docs/Web/API/WebSockets_API)
+- [Python Subprocess Documentation](https://docs.python.org/3/library/subprocess.html)
 - [CosyVoice GitHub Repository](https://github.com/ElasticDash-Official/CosyVoice)
 
 ---

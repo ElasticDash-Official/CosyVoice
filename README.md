@@ -104,6 +104,8 @@
     # No deepspeed as no training at this point
     pip uninstall -y deepspeed
 
+    pip install matcha-tts
+
     # If you encounter sox compatibility issues
     # ubuntu
     sudo apt-get install sox libsox-dev

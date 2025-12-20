@@ -1,13 +1,28 @@
 [Unit]
 Description=CosyVoice Streaming Service
-After=network.target
+After=network-online.target
+Wants=network-online.target
 
 [Service]
-ExecStart=/bin/bash -c "source /home/ec2-user/miniconda3/etc/profile.d/conda.sh && conda activate cosyvoice && python /home/ec2-user/CosyVoice/stream_service.py"
-WorkingDirectory=/home/ec2-user/CosyVoice/
-Restart=always
+Type=simple
 User=ec2-user
+WorkingDirectory=/home/ec2-user/CosyVoice
+
+# ❗ 不直接跑 python
+ExecStart=/home/ec2-user/CosyVoice/start.sh
+
+Restart=always
+RestartSec=10
+
+# 防止把系统拖死
+MemoryMax=12G
+CPUQuota=800%
+LimitNOFILE=65536
+
 Environment=PYTHONUNBUFFERED=1
+
+StandardOutput=journal
+StandardError=journal
 
 [Install]
 WantedBy=multi-user.target
