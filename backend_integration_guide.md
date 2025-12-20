@@ -5,7 +5,7 @@ This document provides instructions on how to integrate your backend program wit
 ---
 
 ## 1. Overview
-The `stream_service.py` script sets up a streaming service that communicates via standard input and output. Clients can send text data to the service through standard input, and the service will respond with audio data through standard output.
+The `stream_service.py` script sets up a streaming service that communicates via a Unix domain socket. Clients can send text data to the service through the socket, and the service will respond with audio data in a length-prefixed binary format.
 
 ### Key Features:
 - Real-time TTS generation.
@@ -34,51 +34,49 @@ Run the following command to start the service:
 python stream_service.py
 ```
 
-The service will be ready to receive requests via standard input.
+The service will be ready to receive requests via the Unix domain socket at `/tmp/cosyvoice.sock`.
 
 ---
 
 ## 3. Client Integration
 
-### Standard Input/Output Communication
-Clients can interact with the service by sending JSON requests through standard input and receiving audio data through standard output.
+### Unix Domain Socket Communication
+Clients can interact with the service by sending JSON requests through the Unix domain socket and receiving audio data in a length-prefixed binary format.
 
 #### Example Client Code (Python):
 ```python
-import subprocess
+import socket
+import struct
 import json
 
 def send_request_to_service(text, speaker="中文女"):
-    # Start the service process
-    process = subprocess.Popen(
-        ["python", "stream_service.py"],
-        stdin=subprocess.PIPE,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        text=True,
-        bufsize=1
-    )
+    # Connect to the Unix domain socket
+    sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    sock.connect("/tmp/cosyvoice.sock")
 
     # Construct the request
-    request = json.dumps({"text": text, "speaker": speaker}) + "\n"
+    request = json.dumps({"text": text, "speaker": speaker}).encode()
 
     # Send the request to the service
-    process.stdin.write(request)
-    process.stdin.flush()
+    sock.sendall(request)
 
     # Receive the audio data
     audio_data = b""
     while True:
-        chunk = process.stdout.buffer.read(1024)
-        if b"__END__" in chunk:
-            audio_data += chunk.replace(b"__END__", b"")
+        # Read the length prefix
+        length_prefix = sock.recv(4)
+        if not length_prefix:
             break
+
+        length = struct.unpack(">I", length_prefix)[0]
+        if length == 0:  # End of stream
+            break
+
+        # Read the audio chunk
+        chunk = sock.recv(length)
         audio_data += chunk
 
-    # Close the service process
-    process.stdin.close()
-    process.terminate()
-
+    sock.close()
     return audio_data
 
 # Example usage
@@ -88,8 +86,8 @@ with open("output.wav", "wb") as f:
 ```
 
 ### Notes:
-- Ensure the `stream_service.py` script is in the same directory as the client code, or adjust the path accordingly.
-- The service sends audio data in chunks. Ensure the client writes the received data to a file or processes it in real-time.
+- Ensure the `stream_service.py` script is running and the socket path matches the client code.
+- The service sends audio data in chunks with a length-prefix framing. Ensure the client processes the framing correctly.
 
 ---
 
@@ -120,7 +118,7 @@ cosyvoice = AutoModel(model_dir='/path/to/your/model', ...)
    - Check the service logs for errors.
 2. **Audio Data Not Received**:
    - Ensure the `pretrained_models` directory contains the required models.
-   - Verify that the client is correctly handling the `__END__` marker.
+   - Verify that the client is correctly handling the length-prefixed framing.
 3. **Performance Issues**:
    - Use GPU acceleration for better performance.
    - Ensure sufficient system resources are available.
@@ -128,7 +126,7 @@ cosyvoice = AutoModel(model_dir='/path/to/your/model', ...)
 ---
 
 ## 6. Additional Resources
-- [Python Subprocess Documentation](https://docs.python.org/3/library/subprocess.html)
+- [Python Socket Programming Documentation](https://docs.python.org/3/library/socket.html)
 - [CosyVoice GitHub Repository](https://github.com/ElasticDash-Official/CosyVoice)
 
 ---
