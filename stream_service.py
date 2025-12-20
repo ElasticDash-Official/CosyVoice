@@ -21,3 +21,7 @@ async def stream(websocket: WebSocket):
     except Exception as e:
         print(f"连接关闭：{e}")
         await websocket.close()
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=50000)
