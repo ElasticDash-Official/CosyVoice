@@ -3,8 +3,8 @@ from cosyvoice.cli.cosyvoice import AutoModel
 
 app = FastAPI()
 
-# 初始化 CosyVoice 模型
-cosyvoice = AutoModel(model_dir='pretrained_models/CosyVoice-300M', load_jit=True, load_trt=True, load_vllm=True, fp16=True)
+# 初始化 CosyVoice 模型，确保使用本地模型路径
+cosyvoice = AutoModel(model_dir='/home/ec2-user/CosyVoice/pretrained_models/CosyVoice-300M', load_jit=True, load_trt=True, load_vllm=True, fp16=True)
 
 @app.websocket("/stream")
 async def stream(websocket: WebSocket):
