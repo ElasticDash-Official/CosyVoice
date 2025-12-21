@@ -5,7 +5,7 @@ This document provides instructions on how to integrate your backend program wit
 ---
 
 ## 1. Overview
-The `stream_service.py` script sets up a streaming service that communicates via a Unix domain socket. Clients can send text data to the service through the socket, and the service will respond with audio data in a length-prefixed binary format.
+The `stream_service.py` script sets up a streaming service using FastAPI. Clients can send text data to the service via HTTP POST requests, and the service will respond with audio data in a hex-encoded format.
 
 ### Key Features:
 - Real-time TTS generation.
@@ -31,53 +31,37 @@ The `stream_service.py` script sets up a streaming service that communicates via
 ### Starting the Service:
 Run the following command to start the service:
 ```bash
-python stream_service.py
+uvicorn stream_service:app --host 0.0.0.0 --port 50000
 ```
 
-The service will be ready to receive requests via the Unix domain socket at `/tmp/cosyvoice.sock`.
+The service will be ready to receive HTTP requests at `http://<server-ip>:50000`.
 
 ---
 
 ## 3. Client Integration
 
-### Unix Domain Socket Communication
-Clients can interact with the service by sending JSON requests through the Unix domain socket and receiving audio data in a length-prefixed binary format.
+### HTTP Communication
+Clients can interact with the service by sending HTTP POST requests to the `/synthesize` endpoint and receiving audio data in a hex-encoded format.
 
 #### Example Client Code (Python):
 ```python
-import socket
-import struct
+import requests
 import json
 
 def send_request_to_service(text, speaker="中文女"):
-    # Connect to the Unix domain socket
-    sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-    sock.connect("/tmp/cosyvoice.sock")
+    url = "http://<server-ip>:50000/synthesize"
+    data = {
+        "text": text,
+        "speaker": speaker
+    }
 
-    # Construct the request
-    request = json.dumps({"text": text, "speaker": speaker}).encode()
-
-    # Send the request to the service
-    sock.sendall(request)
-
-    # Receive the audio data
-    audio_data = b""
-    while True:
-        # Read the length prefix
-        length_prefix = sock.recv(4)
-        if not length_prefix:
-            break
-
-        length = struct.unpack(">I", length_prefix)[0]
-        if length == 0:  # End of stream
-            break
-
-        # Read the audio chunk
-        chunk = sock.recv(length)
-        audio_data += chunk
-
-    sock.close()
-    return audio_data
+    response = requests.post(url, json=data)
+    if response.status_code == 200:
+        audio_hex = response.json()["audio"]
+        audio_data = bytes.fromhex(audio_hex)
+        return audio_data
+    else:
+        raise Exception(f"Error: {response.status_code}, {response.text}")
 
 # Example usage
 audio = send_request_to_service("你好，我是通义生成式语音大模型。")
@@ -86,8 +70,8 @@ with open("output.wav", "wb") as f:
 ```
 
 ### Notes:
-- Ensure the `stream_service.py` script is running and the socket path matches the client code.
-- The service sends audio data in chunks with a length-prefix framing. Ensure the client processes the framing correctly.
+- Replace `<server-ip>` with the actual IP address or hostname of the server running the service.
+- Ensure the service is running and accessible on port 50000.
 
 ---
 
@@ -118,7 +102,7 @@ cosyvoice = AutoModel(model_dir='/path/to/your/model', ...)
    - Check the service logs for errors.
 2. **Audio Data Not Received**:
    - Ensure the `pretrained_models` directory contains the required models.
-   - Verify that the client is correctly handling the length-prefixed framing.
+   - Verify that the client is correctly decoding the hex-encoded audio data.
 3. **Performance Issues**:
    - Use GPU acceleration for better performance.
    - Ensure sufficient system resources are available.
@@ -126,7 +110,7 @@ cosyvoice = AutoModel(model_dir='/path/to/your/model', ...)
 ---
 
 ## 6. Additional Resources
-- [Python Socket Programming Documentation](https://docs.python.org/3/library/socket.html)
+- [FastAPI Documentation](https://fastapi.tiangolo.com/)
 - [CosyVoice GitHub Repository](https://github.com/ElasticDash-Official/CosyVoice)
 
 ---
