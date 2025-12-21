@@ -8,21 +8,33 @@ Type=simple
 User=ec2-user
 WorkingDirectory=/home/ec2-user/CosyVoice
 
-# ❗ 不直接跑 python
 ExecStart=/home/ec2-user/CosyVoice/start.sh
 
-Restart=always
-RestartSec=10
-
-# 防止把系统拖死
-MemoryMax=12G
-CPUQuota=800%
-LimitNOFILE=65536
-
-Environment=PYTHONUNBUFFERED=1
-
+# ✅ 统一使用 journald 管理日志，避免日志文件无限增长
 StandardOutput=journal
 StandardError=journal
+
+# Python 行为
+Environment=PYTHONUNBUFFERED=1
+
+# ✅ 资源护栏（非常关键）
+MemoryMax=12G
+MemoryHigh=10G
+TasksMax=128
+LimitNOFILE=65536
+
+# ✅ CPU 限制，防止占满CPU
+CPUQuota=200%
+
+# ✅ 更安全的重启策略
+Restart=on-failure
+RestartSec=5
+
+# ✅ 防止 stop 卡死
+TimeoutStartSec=30
+TimeoutStopSec=15
+KillSignal=SIGTERM
+KillMode=mixed
 
 [Install]
 WantedBy=multi-user.target

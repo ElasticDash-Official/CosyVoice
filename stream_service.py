@@ -46,4 +46,12 @@ async def health_check():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=50000)
+    uvicorn.run(
+        app,
+        host="0.0.0.0",
+        port=50000,
+        workers=1,              # 单进程避免内存重复加载模型
+        limit_concurrency=10,   # 最大10个并发连接
+        timeout_keep_alive=30,  # 30秒keepalive超时
+        log_level="warning"     # 只记录警告和错误，减少日志量
+    )
