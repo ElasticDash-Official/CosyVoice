@@ -5,7 +5,7 @@ This document provides instructions on how to integrate your backend program wit
 ---
 
 ## 1. Overview
-The `stream_service.py` script sets up a streaming service using FastAPI. Clients can send text data to the service via HTTP POST requests, and the service will respond with audio data in a hex-encoded format.
+The `stream_service.py` script sets up a streaming service using FastAPI. Clients can send text data to the service via HTTP POST requests, and the service will respond with audio data in a streaming format.
 
 ### Key Features:
 - Real-time TTS generation.
@@ -40,13 +40,12 @@ The service will be ready to receive HTTP requests at `http://<server-ip>:50000`
 
 ## 3. Client Integration
 
-### HTTP Communication
-Clients can interact with the service by sending HTTP POST requests to the `/synthesize` endpoint and receiving audio data in a hex-encoded format.
+### HTTP Streaming Communication
+Clients can interact with the service by sending HTTP POST requests to the `/synthesize` endpoint and receiving audio data as a streaming response.
 
 #### Example Client Code (Python):
 ```python
 import requests
-import json
 
 def send_request_to_service(text, speaker="中文女"):
     url = "http://<server-ip>:50000/synthesize"
@@ -55,18 +54,17 @@ def send_request_to_service(text, speaker="中文女"):
         "speaker": speaker
     }
 
-    response = requests.post(url, json=data)
+    response = requests.post(url, json=data, stream=True)
     if response.status_code == 200:
-        audio_hex = response.json()["audio"]
-        audio_data = bytes.fromhex(audio_hex)
-        return audio_data
+        with open("output_stream.wav", "wb") as f:
+            for chunk in response.iter_content(chunk_size=1024):
+                if chunk:  # 确保数据块不为空
+                    f.write(chunk)
     else:
         raise Exception(f"Error: {response.status_code}, {response.text}")
 
 # Example usage
-audio = send_request_to_service("你好，我是通义生成式语音大模型。")
-with open("output.wav", "wb") as f:
-    f.write(audio)
+send_request_to_service("你好，我是通义生成式语音大模型。")
 ```
 
 ### Notes:
@@ -102,7 +100,7 @@ cosyvoice = AutoModel(model_dir='/path/to/your/model', ...)
    - Check the service logs for errors.
 2. **Audio Data Not Received**:
    - Ensure the `pretrained_models` directory contains the required models.
-   - Verify that the client is correctly decoding the hex-encoded audio data.
+   - Verify that the client is correctly handling the streaming response.
 3. **Performance Issues**:
    - Use GPU acceleration for better performance.
    - Ensure sufficient system resources are available.
