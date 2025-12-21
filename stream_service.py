@@ -15,7 +15,9 @@ app = FastAPI()
 
 # 初始化 CosyVoice 模型
 cosyvoice = AutoModel(
-    model_dir="/home/ec2-user/CosyVoice/pretrained_models/CosyVoice-300M-SFT"
+    # model_dir="/home/ec2-user/CosyVoice/pretrained_models/CosyVoice-300M-SFT"
+    model_dir="/home/ec2-user/CosyVoice/pretrained_models/CosyVoice2-0.5B"
+    # model_dir="/home/ec2-user/CosyVoice/pretrained_models/Fun-CosyVoice3-0.5B-2512"
 )
 
 # 定义请求模型
