@@ -211,6 +211,82 @@ docker compose up -d
 ```
 For more details, you could check [here](https://github.com/FunAudioLLM/CosyVoice/tree/main/runtime/triton_trtllm)
 
+## Service Configuration and Management
+
+This project can be configured as a service for easier management and deployment. Below are the steps to configure, start, stop, and monitor the service.
+
+### 1. Configure the Service
+
+1. Create a systemd service file for `stream_service.py`:
+   ```bash
+   sudo nano /etc/systemd/system/stream_service.service
+   ```
+
+2. Add the following content to the file:
+   ```ini
+   [Unit]
+   Description=CosyVoice Streaming Service
+   After=network.target
+
+   [Service]
+   ExecStart=/path/to/uvicorn stream_service:app --host 0.0.0.0 --port 50000
+   WorkingDirectory=/path/to/CosyVoice
+   Restart=always
+   User=your-username
+   Environment="PATH=/path/to/conda/envs/cosyvoice/bin"
+
+   [Install]
+   WantedBy=multi-user.target
+   ```
+   Replace `/path/to/uvicorn`, `/path/to/CosyVoice`, and `/path/to/conda/envs/cosyvoice/bin` with the actual paths in your environment.
+
+3. Reload the systemd daemon to apply the changes:
+   ```bash
+   sudo systemctl daemon-reload
+   ```
+
+### 2. Start the Service
+
+To start the service, run:
+```bash
+sudo systemctl start stream_service
+```
+
+### 3. Enable the Service at Boot
+
+To ensure the service starts automatically on system boot, enable it:
+```bash
+sudo systemctl enable stream_service
+```
+
+### 4. Stop the Service
+
+To stop the service, run:
+```bash
+sudo systemctl stop stream_service
+```
+
+### 5. Monitor the Service
+
+To check the status of the service, run:
+```bash
+sudo systemctl status stream_service
+```
+
+To view the service logs, use:
+```bash
+journalctl -u stream_service
+```
+
+### 6. Restart the Service
+
+If you make changes to the service file or the application, restart the service:
+```bash
+sudo systemctl restart stream_service
+```
+
+By following these steps, you can manage the `stream_service.py` application as a systemd service, ensuring it runs reliably and restarts automatically in case of failure.
+
 ## Discussion & Communication
 
 You can directly discuss on [Github Issues](https://github.com/FunAudioLLM/CosyVoice/issues).
