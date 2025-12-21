@@ -15,7 +15,7 @@ app = FastAPI()
 
 # 初始化 CosyVoice 模型
 cosyvoice = AutoModel(
-    model_dir="/home/ec2-user/CosyVoice/pretrained_models/Fun-CosyVoice3-0.5B"
+    model_dir="/home/ec2-user/CosyVoice/pretrained_models/CosyVoice-300M-SFT"
 )
 
 # 定义请求模型
@@ -29,7 +29,7 @@ async def synthesize_streaming(request: TTSRequest):
     try:
         # 定义生成器函数，用于逐步生成音频数据
         async def audio_stream():
-            for result in cosyvoice.inference_sft(request.text, request.speaker, stream=True):
+            for result in cosyvoice.inference_sft(request.text, stream=True):
                 audio_chunk = result["tts_speech"].numpy().tobytes()
                 # 使用 yield 逐步发送音频数据
                 yield audio_chunk
