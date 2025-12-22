@@ -152,7 +152,7 @@ async def synthesize_streaming(
                     inference_method = lambda: cosyvoice.inference_instruct2(
                         text,
                         instruction_text,
-                        temp_wav_path,
+                        abs_wav_path, 
                         stream=True
                     )
                 else:
@@ -173,8 +173,8 @@ async def synthesize_streaming(
                     logger.info(f"  - File exists: {os.path.exists(abs_wav_path)}")
 
                     inference_method = lambda: cosyvoice.inference_zero_shot(
-                        '收到好友从远方寄来的生日礼物，那份意外的惊喜与深深的祝福让我心中充满了甜蜜的快乐，笑容如花儿般绽放。', 
-                        'You are a helpful assistant.<|endofprompt|>希望你以后能够做的比我还好呦。', 
+                        text,
+                        instruction_text,
                         abs_wav_path, 
                         stream=True
                     )
