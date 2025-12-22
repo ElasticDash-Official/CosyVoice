@@ -71,28 +71,28 @@ async def synthesize_streaming(
     默认为餐馆店员场景
     """
     try:
-        # CosyVoice 第一代 - 使用 speaker_id
-        if isinstance(cosyvoice, CosyVoice):
-            speaker = speaker if speaker else default_speaker
+        # # CosyVoice 第一代 - 使用 speaker_id
+        # if isinstance(cosyvoice, CosyVoice):
+        #     speaker = speaker if speaker else default_speaker
 
-            if speaker not in available_speakers:
-                logger.warning(f"Requested speaker '{speaker}' not available. Using default: {default_speaker}")
-                speaker = default_speaker
+        #     if speaker not in available_speakers:
+        #         logger.warning(f"Requested speaker '{speaker}' not available. Using default: {default_speaker}")
+        #         speaker = default_speaker
 
-            if not speaker:
-                raise HTTPException(status_code=500, detail="No available speakers found")
+        #     if not speaker:
+        #         raise HTTPException(status_code=500, detail="No available speakers found")
 
-            logger.info(f"[CosyVoice] Synthesizing with speaker: {speaker}")
+        #     logger.info(f"[CosyVoice] Synthesizing with speaker: {speaker}")
 
-            async def audio_stream():
-                for result in cosyvoice.inference_sft(text, speaker, stream=True):
-                    audio_chunk = result["tts_speech"].numpy().tobytes()
-                    yield audio_chunk
+        #     async def audio_stream():
+        #         for result in cosyvoice.inference_sft(text, speaker, stream=True):
+        #             audio_chunk = result["tts_speech"].numpy().tobytes()
+        #             yield audio_chunk
 
-            return StreamingResponse(audio_stream(), media_type="application/octet-stream")
+        #     return StreamingResponse(audio_stream(), media_type="application/octet-stream")
 
         # CosyVoice2/3 - 使用 instruction
-        elif isinstance(cosyvoice, (CosyVoice2, CosyVoice3)):
+        if isinstance(cosyvoice, (CosyVoice2, CosyVoice3)):
             # 使用提供的instruction,如果没有则使用默认的餐馆店员instruction
             instruction_text = instruction if instruction else default_instruction
 
