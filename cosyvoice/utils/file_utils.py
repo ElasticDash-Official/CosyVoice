@@ -42,8 +42,22 @@ def read_json_lists(list_file):
 
 
 def load_wav(wav, target_sr, min_sr=16000):
-    speech, sample_rate = torchaudio.load(wav, backend='soundfile')
-    speech = speech.mean(dim=0, keepdim=True)
+    # 直接使用 soundfile 避免 torchcodec 依赖问题
+    import soundfile as sf
+    import torch
+
+    speech, sample_rate = sf.read(wav)
+    # 转换为 torch tensor 并添加 channel 维度
+    speech = torch.from_numpy(speech).float()
+    if speech.dim() == 1:
+        speech = speech.unsqueeze(0)  # 添加 channel 维度
+    else:
+        speech = speech.transpose(0, 1)  # [samples, channels] -> [channels, samples]
+
+    # 如果是多声道,转为单声道
+    if speech.shape[0] > 1:
+        speech = speech.mean(dim=0, keepdim=True)
+
     if sample_rate != target_sr:
         assert sample_rate >= min_sr, 'wav sample rate {} must be greater than {}'.format(sample_rate, target_sr)
         speech = torchaudio.transforms.Resample(orig_freq=sample_rate, new_freq=target_sr)(speech)
