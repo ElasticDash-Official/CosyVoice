@@ -96,48 +96,74 @@ async def synthesize_streaming(
             # 使用提供的instruction,如果没有则使用默认的餐馆店员instruction
             instruction_text = instruction if instruction else default_instruction
 
-            # 处理prompt_wav文件
+            # 处理prompt_wav文件 (可选)
             temp_wav_path = None
             if prompt_wav:
+                # 用户上传了音频文件
                 with tempfile.NamedTemporaryFile(delete=False, suffix='.wav') as temp_file:
                     content = await prompt_wav.read()
                     temp_file.write(content)
                     temp_wav_path = temp_file.name
                 logger.info(f"Using uploaded prompt_wav: {temp_wav_path}")
             elif os.path.exists(default_prompt_wav):
+                # 使用默认音频文件
                 temp_wav_path = default_prompt_wav
                 logger.info(f"Using default prompt_wav: {temp_wav_path}")
             else:
-                raise HTTPException(
-                    status_code=400,
-                    detail=f"No prompt_wav provided and default file not found at {default_prompt_wav}"
-                )
+                # 没有音频文件,仅使用 instruction
+                logger.warning(f"No prompt_wav provided and default file not found at {default_prompt_wav}")
+                logger.warning("Synthesis will use instruction only without voice reference")
 
             logger.info(f"[{model_type}] Synthesizing with instruction: {instruction_text}")
 
             # 根据参数选择推理方法
-            if instruction_text:
-                # 使用instruct2模式
+            if instruction_text and temp_wav_path:
+                # 有 instruction 和音频文件 - 使用 instruct2 模式
+                logger.info("Using inference_instruct2 with prompt_wav")
                 inference_method = lambda: cosyvoice.inference_instruct2(
                     text,
                     instruction_text,
                     temp_wav_path,
                     stream=True
                 )
-            elif prompt_text:
+            elif instruction_text:
+                # 只有 instruction,没有音频文件 - CosyVoice2必须要音频文件
+                logger.error("CosyVoice2 requires prompt_wav for synthesis")
+                raise HTTPException(
+                    status_code=400,
+                    detail={
+                        "error": "prompt_wav_required",
+                        "message": "CosyVoice2 requires a voice reference audio file (prompt_wav)",
+                        "solutions": [
+                            f"1. Place a default WAV file at: {default_prompt_wav}",
+                            "2. Upload a prompt_wav file with your request",
+                            "3. The instruction controls speaking style, but audio file provides voice timbre"
+                        ],
+                        "example": "curl -F 'text=你好' -F 'instruction=你是一位温柔的客服<|endofprompt|>' -F 'prompt_wav=@voice.wav' http://server:50000/synthesize"
+                    }
+                )
+            elif prompt_text and temp_wav_path:
                 # 使用zero_shot模式
+                logger.info("Using inference_zero_shot")
                 inference_method = lambda: cosyvoice.inference_zero_shot(
                     text,
                     prompt_text,
                     temp_wav_path,
                     stream=True
                 )
-            else:
+            elif temp_wav_path:
                 # 使用cross_lingual模式
+                logger.info("Using inference_cross_lingual")
                 inference_method = lambda: cosyvoice.inference_cross_lingual(
                     text,
                     temp_wav_path,
                     stream=True
+                )
+            else:
+                # 没有任何参考信息
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"At least one of the following is required: prompt_wav (voice reference) or default file at {default_prompt_wav}"
                 )
 
             async def audio_stream():
