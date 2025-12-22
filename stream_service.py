@@ -19,12 +19,34 @@ logger = logging.getLogger(__name__)
 # 初始化 FastAPI 应用
 app = FastAPI()
 
+# GPU优化（如果可用）
+import torch
+if torch.cuda.is_available():
+    torch.backends.cudnn.benchmark = True  # 自动选择最优卷积算法
+    torch.set_float32_matmul_precision('high')  # 使用TF32精度加速
+
 # 初始化 CosyVoice 模型
 # model_dir = "/home/ec2-user/CosyVoice/pretrained_models/CosyVoice2-0.5B"
 # model_dir = "/home/ec2-user/CosyVoice/pretrained_models/CosyVoice-300M-SFT"
 model_dir = "/home/ec2-user/CosyVoice/pretrained_models/Fun-CosyVoice3-0.5B-2512"
 
-cosyvoice = AutoModel(model_dir=model_dir)
+# 性能优化：支持通过环境变量启用 FP16 和量化模型
+USE_FP16 = os.getenv('COSYVOICE_FP16', 'true').lower() == 'true'
+USE_QUANTIZED = os.getenv('COSYVOICE_QUANTIZED', 'false').lower() == 'true'
+
+if USE_QUANTIZED:
+    # 自动查找量化模型目录
+    quantized_dir = model_dir.rstrip('/') + '-quantized'
+    if os.path.exists(quantized_dir):
+        model_dir = quantized_dir
+        logger.warning(f"Using quantized model: {model_dir}")
+    else:
+        logger.warning(f"Quantized model not found at {quantized_dir}, using original model")
+
+logger.warning(f"Loading model from: {model_dir}")
+logger.warning(f"FP16 enabled: {USE_FP16}")
+
+cosyvoice = AutoModel(model_dir=model_dir, fp16=USE_FP16)
 
 # 检测模型类型
 model_type = type(cosyvoice).__name__
