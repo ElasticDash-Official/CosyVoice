@@ -190,24 +190,16 @@ async def synthesize_streaming(
                     import io
                     import soundfile as sf
                     
-                    # 收集所有音频块
-                    chunks = []
                     for result in inference_method():
                         # 正确处理 tensor: squeeze() 去除多余维度, cpu() 移到 CPU
                         audio_chunk = result["tts_speech"].squeeze().cpu().numpy()
-                        chunks.append(audio_chunk)
-                    
-                    # 拼接所有块
-                    import numpy as np
-                    if chunks:
-                        full_audio = np.concatenate(chunks)
                         
-                        # 生成完整的 WAV 文件（带文件头）
+                        # 将每个块转换为完整的 WAV 格式（带文件头）
                         buffer = io.BytesIO()
-                        sf.write(buffer, full_audio, cosyvoice.sample_rate, format='WAV')
+                        sf.write(buffer, audio_chunk, cosyvoice.sample_rate, format='WAV', subtype='PCM_16')
                         buffer.seek(0)
                         
-                        # 返回完整的 WAV 数据
+                        # 返回完整的 WAV 数据块
                         yield buffer.read()
                 finally:
                     # 只清理上传的临时文件,不清理默认文件
@@ -224,6 +216,76 @@ async def synthesize_streaming(
         raise
     except Exception as e:
         logger.error(f"Error during synthesis: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+# 非流式测试端点 - 返回完整 WAV 文件
+@app.post("/synthesize_complete")
+async def synthesize_complete(
+    text: str = Form(...),
+    instruction: Optional[str] = Form(None),
+    prompt_wav: Optional[UploadFile] = File(None)
+):
+    """
+    非流式合成接口，返回完整的 WAV 文件（用于测试音色）
+    """
+    try:
+        if isinstance(cosyvoice, (CosyVoice2, CosyVoice3)):
+            instruction_text = instruction if instruction else None
+            
+            # 处理音频文件
+            temp_wav_path = None
+            if prompt_wav:
+                with tempfile.NamedTemporaryFile(delete=False, suffix='.wav') as temp_file:
+                    content = await prompt_wav.read()
+                    temp_file.write(content)
+                    temp_wav_path = temp_file.name
+            elif os.path.exists(default_prompt_wav):
+                temp_wav_path = default_prompt_wav
+            else:
+                raise HTTPException(status_code=400, detail="No voice reference audio")
+            
+            abs_wav_path = os.path.abspath(temp_wav_path)
+            logger.info(f"Complete synthesis - voice: {abs_wav_path}")
+            
+            # 收集所有音频块
+            import numpy as np
+            chunks = []
+            
+            if instruction_text:
+                for result in cosyvoice.inference_instruct2(text, instruction_text, abs_wav_path, stream=False):
+                    chunks.append(result["tts_speech"].squeeze().cpu().numpy())
+            else:
+                for result in cosyvoice.inference_zero_shot(
+                    '收到好友从远方寄来的生日礼物，那份意外的惊喜与深深的祝福让我心中充满了甜蜜的快乐，笑容如花儿般绽放。',
+                    'You are a helpful assistant.<|endofprompt|>希望你以后能够做的比我还好呦。',
+                    abs_wav_path,
+                    stream=False
+                ):
+                    chunks.append(result["tts_speech"].squeeze().cpu().numpy())
+            
+            # 拼接并生成 WAV
+            if chunks:
+                import io
+                import soundfile as sf
+                full_audio = np.concatenate(chunks)
+                buffer = io.BytesIO()
+                sf.write(buffer, full_audio, cosyvoice.sample_rate, format='WAV')
+                buffer.seek(0)
+                
+                # 清理临时文件
+                if prompt_wav and temp_wav_path and os.path.exists(temp_wav_path):
+                    os.unlink(temp_wav_path)
+                
+                return StreamingResponse(buffer, media_type="audio/wav")
+            else:
+                raise HTTPException(status_code=500, detail="No audio generated")
+        else:
+            raise HTTPException(status_code=400, detail="Model not supported")
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error during complete synthesis: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 # 获取模型信息的路由
