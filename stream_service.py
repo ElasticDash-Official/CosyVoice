@@ -165,12 +165,18 @@ async def synthesize_streaming(
                     logger.info(f"  - Prompt text: '{actual_prompt_text}'")
                     logger.info(f"  - Voice reference: {os.path.basename(temp_wav_path)}")
                     logger.info(f"  - Voice will MATCH the prompt audio")
+                    
+                    # 确保使用绝对路径
+                    abs_wav_path = os.path.abspath(temp_wav_path)
+                    logger.info(f"  - Absolute path: {abs_wav_path}")
+                    logger.info(f"  - File exists: {os.path.exists(abs_wav_path)}")
 
                     inference_method = lambda: cosyvoice.inference_zero_shot(
                         '收到好友从远方寄来的生日礼物，那份意外的惊喜与深深的祝福让我心中充满了甜蜜的快乐，笑容如花儿般绽放。', 
                         'You are a helpful assistant.<|endofprompt|>希望你以后能够做的比我还好呦。', 
-                        './asset/zero_shot_prompt.wav', 
-                        stream=True
+                        abs_wav_path, 
+                        stream=True,
+                        text_frontend=False
                     )
             else:
                 # 没有音频文件
