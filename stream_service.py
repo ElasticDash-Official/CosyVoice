@@ -91,10 +91,11 @@ async def synthesize_streaming(
 
         #     return StreamingResponse(audio_stream(), media_type="application/octet-stream")
 
-        # CosyVoice2/3 - 使用 instruction
+        # CosyVoice2/3 - 支持多种推理模式
         if isinstance(cosyvoice, (CosyVoice2, CosyVoice3)):
-            # 使用提供的instruction,如果没有则使用默认的餐馆店员instruction
-            instruction_text = instruction if instruction else default_instruction
+            # instruction 是可选的
+            # 如果不提供,将使用 cross_lingual 模式(只基于音频文件)
+            instruction_text = instruction if instruction else None
 
             # 处理prompt_wav文件 (可选)
             temp_wav_path = None
@@ -122,7 +123,10 @@ async def synthesize_streaming(
                 logger.warning(f"  - Current working directory: {os.getcwd()}")
                 logger.warning("Synthesis will fail - CosyVoice2 requires a voice reference audio")
 
-            logger.info(f"[{model_type}] Synthesizing with instruction: {instruction_text}")
+            if instruction_text:
+                logger.info(f"[{model_type}] Synthesizing with instruction: {instruction_text}")
+            else:
+                logger.info(f"[{model_type}] Synthesizing WITHOUT instruction (audio-only mode)")
 
             # 根据参数选择推理方法
             if instruction_text and temp_wav_path:
@@ -176,8 +180,22 @@ async def synthesize_streaming(
                     stream=True
                 )
             elif temp_wav_path:
-                # 使用cross_lingual模式
-                logger.info("Using inference_cross_lingual")
+                # 只有音频文件,没有instruction - 使用cross_lingual模式
+                try:
+                    import soundfile as sf
+                    audio_info = sf.info(temp_wav_path)
+                    logger.info(f"✓ Verified prompt_wav audio properties:")
+                    logger.info(f"  - Sample rate: {audio_info.samplerate} Hz")
+                    logger.info(f"  - Duration: {audio_info.duration:.2f} seconds")
+                    logger.info(f"  - Channels: {audio_info.channels}")
+                except Exception as e:
+                    logger.error(f"✗ Failed to read prompt_wav audio file: {e}")
+                    raise HTTPException(status_code=500, detail=f"Invalid audio file: {str(e)}")
+
+                logger.info("→ Using inference_cross_lingual (audio-only, no instruction)")
+                logger.info(f"  - Text: '{text[:50]}...' (len={len(text)})")
+                logger.info(f"  - Voice will match the prompt audio directly")
+                logger.info(f"  - Voice reference: {os.path.basename(temp_wav_path)}")
                 inference_method = lambda: cosyvoice.inference_cross_lingual(
                     text,
                     temp_wav_path,

@@ -62,11 +62,28 @@ Clients can interact with the service by sending HTTP POST requests to the `/syn
 **Parameters:**
 - `text` (required): The text to synthesize
 - `instruction` (optional): Voice instruction to control tone and style
-  - Default: `"你是一位热情友好的餐馆店员,说话温柔亲切,语气礼貌专业。<|endofprompt|>"`
   - Format: Instruction text followed by `<|endofprompt|>` marker
+  - If not provided, uses audio-only mode (cross-lingual synthesis)
 - `prompt_wav` (optional): Custom voice prompt audio file (WAV format)
   - If not provided, uses the default prompt at `./asset/zero_shot_prompt.wav`
 - `prompt_text` (optional): Reference text for zero-shot synthesis
+
+**Synthesis Modes:**
+CosyVoice2 supports three synthesis modes:
+
+1. **Instruction + Audio (instruct2 mode)**: Most flexible
+   - Provide both `instruction` and `prompt_wav`
+   - `instruction` controls speaking style (tone, emotion)
+   - `prompt_wav` provides voice timbre (pitch, voice characteristics)
+
+2. **Audio-Only (cross-lingual mode)**: Direct voice cloning
+   - Provide only `prompt_wav` (no `instruction`)
+   - Voice will directly match the prompt audio
+   - Best for voice cloning without style modification
+
+3. **Zero-Shot (zero_shot mode)**: With reference text
+   - Provide `prompt_text` and `prompt_wav`
+   - Uses reference text for better voice matching
 
 #### Example 1: Basic Usage with Default Settings
 ```python
@@ -160,7 +177,42 @@ synthesize_with_custom_voice(
 )
 ```
 
-#### Example 4: Using cURL
+#### Example 4: Audio-Only Mode (Voice Cloning)
+```python
+import requests
+
+def synthesize_audio_only(text, prompt_wav_path):
+    """
+    Audio-only mode - voice will directly match the prompt audio
+    No instruction needed - direct voice cloning
+    """
+    url = "http://<server-ip>:50000/synthesize"
+    data = {
+        "text": text
+        # NO instruction parameter - will use cross-lingual mode
+    }
+    files = {
+        "prompt_wav": open(prompt_wav_path, "rb")
+    }
+
+    response = requests.post(url, data=data, files=files, stream=True)
+    if response.status_code == 200:
+        with open("output_stream.wav", "wb") as f:
+            for chunk in response.iter_content(chunk_size=1024):
+                if chunk:
+                    f.write(chunk)
+        print("Audio saved to output_stream.wav")
+    else:
+        raise Exception(f"Error: {response.status_code}, {response.text}")
+
+# Example usage - voice will match paimon_prompt.wav exactly
+synthesize_audio_only(
+    "原神,启动!",
+    "./asset/paimon_prompt.wav"
+)
+```
+
+#### Example 5: Using cURL
 ```bash
 # Basic usage with default settings
 curl -X POST "http://<server-ip>:50000/synthesize" \
@@ -178,6 +230,12 @@ curl -X POST "http://<server-ip>:50000/synthesize" \
   -F "text=您好,有什么可以帮您?" \
   -F "instruction=你是一位专业的客服人员。<|endofprompt|>" \
   -F "prompt_wav=@./my_voice.wav" \
+  --output output.wav
+
+# Audio-only mode (voice cloning, no instruction)
+curl -X POST "http://<server-ip>:50000/synthesize" \
+  -F "text=原神,启动!" \
+  -F "prompt_wav=@./asset/paimon_prompt.wav" \
   --output output.wav
 ```
 
