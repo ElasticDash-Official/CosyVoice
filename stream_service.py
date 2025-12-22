@@ -20,7 +20,7 @@ model_dir = "/home/ec2-user/CosyVoice/pretrained_models/CosyVoice2-0.5B"
 # model_dir = "/home/ec2-user/CosyVoice/pretrained_models/CosyVoice-300M-SFT"
 # model_dir = "/home/ec2-user/CosyVoice/pretrained_models/Fun-CosyVoice3-0.5B-2512"
 
-cosyvoice = CosyVoice2(model_dir=model_dir)
+cosyvoice = AutoModel(model_dir=model_dir)
 
 # 检测模型类型
 model_type = type(cosyvoice).__name__
@@ -165,8 +165,6 @@ async def synthesize_streaming(
                     logger.info(f"  - Prompt text: '{actual_prompt_text}'")
                     logger.info(f"  - Voice reference: {os.path.basename(temp_wav_path)}")
                     logger.info(f"  - Voice will MATCH the prompt audio")
-
-                    cosyvoice = AutoModel(model_dir='pretrained_models/CosyVoice2-0.5B')
 
                     inference_method = lambda: cosyvoice.inference_zero_shot('收到好友从远方寄来的生日礼物，那份意外的惊喜与深深的祝福让我心中充满了甜蜜的快乐，笑容如花儿般绽放。', '希望你以后能够做的比我还好呦。', './asset/zero_shot_prompt.wav', stream=True)
             else:
