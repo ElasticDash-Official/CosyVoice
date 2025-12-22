@@ -187,16 +187,35 @@ async def synthesize_streaming(
 
             async def audio_stream():
                 try:
+                    import io
+                    import soundfile as sf
+                    
+                    # 收集所有音频块
+                    chunks = []
                     for result in inference_method():
-                        audio_chunk = result["tts_speech"].numpy().tobytes()
-                        yield audio_chunk
+                        # 正确处理 tensor: squeeze() 去除多余维度, cpu() 移到 CPU
+                        audio_chunk = result["tts_speech"].squeeze().cpu().numpy()
+                        chunks.append(audio_chunk)
+                    
+                    # 拼接所有块
+                    import numpy as np
+                    if chunks:
+                        full_audio = np.concatenate(chunks)
+                        
+                        # 生成完整的 WAV 文件（带文件头）
+                        buffer = io.BytesIO()
+                        sf.write(buffer, full_audio, cosyvoice.sample_rate, format='WAV')
+                        buffer.seek(0)
+                        
+                        # 返回完整的 WAV 数据
+                        yield buffer.read()
                 finally:
                     # 只清理上传的临时文件,不清理默认文件
                     if prompt_wav and temp_wav_path and os.path.exists(temp_wav_path):
                         os.unlink(temp_wav_path)
                         logger.info(f"Cleaned up temporary file: {temp_wav_path}")
 
-            return StreamingResponse(audio_stream(), media_type="application/octet-stream")
+            return StreamingResponse(audio_stream(), media_type="audio/wav")
 
         else:
             raise HTTPException(status_code=500, detail=f"Unknown model type: {model_type}")
