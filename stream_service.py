@@ -152,6 +152,10 @@ async def synthesize_streaming(
                     logger.info(f"  - Text: '{text[:50]}...' (len={len(text)})")
                     logger.info(f"  - Instruction: '{instruction_text[:80]}...'")
                     logger.info(f"  - Voice reference: {os.path.basename(temp_wav_path)}")
+                    
+                    # 确保使用绝对路径
+                    abs_wav_path = os.path.abspath(temp_wav_path)
+                    
                     inference_method = lambda: cosyvoice.inference_instruct2(
                         text,
                         instruction_text,
@@ -177,7 +181,7 @@ async def synthesize_streaming(
 
                     inference_method = lambda: cosyvoice.inference_zero_shot(
                         text,
-                        instruction_text,
+                        'You are a helpful assistant.<|endofprompt|>' + actual_prompt_text,
                         abs_wav_path, 
                         stream=True
                     )
