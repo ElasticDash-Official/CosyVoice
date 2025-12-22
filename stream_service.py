@@ -187,20 +187,13 @@ async def synthesize_streaming(
 
             async def audio_stream():
                 try:
-                    import io
-                    import soundfile as sf
-                    
                     for result in inference_method():
                         # 正确处理 tensor: squeeze() 去除多余维度, cpu() 移到 CPU
                         audio_chunk = result["tts_speech"].squeeze().cpu().numpy()
                         
-                        # 将每个块转换为完整的 WAV 格式（带文件头）
-                        buffer = io.BytesIO()
-                        sf.write(buffer, audio_chunk, cosyvoice.sample_rate, format='WAV', subtype='PCM_16')
-                        buffer.seek(0)
-                        
-                        # 返回完整的 WAV 数据块
-                        yield buffer.read()
+                        # 返回原始 Float32 PCM 数据（不带任何文件头）
+                        # 客户端需要知道采样率是 24000 Hz
+                        yield audio_chunk.astype('float32').tobytes()
                 finally:
                     # 只清理上传的临时文件,不清理默认文件
                     if prompt_wav and temp_wav_path and os.path.exists(temp_wav_path):
