@@ -3,6 +3,7 @@ from fastapi import FastAPI, HTTPException, UploadFile, File, Form
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from cosyvoice.cli.cosyvoice import AutoModel, CosyVoice, CosyVoice2, CosyVoice3
+from cosyvoice.utils.file_utils import load_wav
 from typing import Optional
 import os
 import logging
@@ -20,7 +21,7 @@ model_dir = "/home/ec2-user/CosyVoice/pretrained_models/CosyVoice2-0.5B"
 # model_dir = "/home/ec2-user/CosyVoice/pretrained_models/CosyVoice-300M-SFT"
 # model_dir = "/home/ec2-user/CosyVoice/pretrained_models/Fun-CosyVoice3-0.5B-2512"
 
-cosyvoice = AutoModel(model_dir=model_dir)
+cosyvoice = CosyVoice2(model_dir=model_dir)
 
 # 检测模型类型
 model_type = type(cosyvoice).__name__
@@ -150,8 +151,8 @@ async def synthesize_streaming(
                     logger.info(f"  - Voice reference: {os.path.basename(temp_wav_path)}")
                     inference_method = lambda: cosyvoice.inference_instruct2(
                         text,
-                        instruction_text,
-                        temp_wav_path,
+                        '希望你以后能够做的比我还好呦。', 
+                        './asset/zero_shot_prompt.wav',
                         stream=True
                     )
                 else:
@@ -167,9 +168,9 @@ async def synthesize_streaming(
                     logger.info(f"  - Voice will MATCH the prompt audio")
 
                     inference_method = lambda: cosyvoice.inference_zero_shot(
-                        text,
-                        actual_prompt_text,
-                        temp_wav_path,
+                        text, 
+                        '希望你以后能够做的比我还好呦。', 
+                        './asset/zero_shot_prompt.wav',
                         stream=True
                     )
             else:
