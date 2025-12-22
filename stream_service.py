@@ -16,9 +16,9 @@ logger = logging.getLogger(__name__)
 app = FastAPI()
 
 # 初始化 CosyVoice 模型
-model_dir = "/home/ec2-user/CosyVoice/pretrained_models/CosyVoice2-0.5B"
+# model_dir = "/home/ec2-user/CosyVoice/pretrained_models/CosyVoice2-0.5B"
 # model_dir = "/home/ec2-user/CosyVoice/pretrained_models/CosyVoice-300M-SFT"
-# model_dir = "/home/ec2-user/CosyVoice/pretrained_models/Fun-CosyVoice3-0.5B-2512"
+model_dir = "/home/ec2-user/CosyVoice/pretrained_models/Fun-CosyVoice3-0.5B-2512"
 
 cosyvoice = AutoModel(model_dir=model_dir)
 
@@ -166,7 +166,12 @@ async def synthesize_streaming(
                     logger.info(f"  - Voice reference: {os.path.basename(temp_wav_path)}")
                     logger.info(f"  - Voice will MATCH the prompt audio")
 
-                    inference_method = lambda: cosyvoice.inference_zero_shot('收到好友从远方寄来的生日礼物，那份意外的惊喜与深深的祝福让我心中充满了甜蜜的快乐，笑容如花儿般绽放。', '希望你以后能够做的比我还好呦。', './asset/zero_shot_prompt.wav', stream=True)
+                    inference_method = lambda: cosyvoice.inference_zero_shot(
+                        '收到好友从远方寄来的生日礼物，那份意外的惊喜与深深的祝福让我心中充满了甜蜜的快乐，笑容如花儿般绽放。', 
+                        'You are a helpful assistant.<|endofprompt|>希望你以后能够做的比我还好呦。', 
+                        './asset/zero_shot_prompt.wav', 
+                        stream=True
+                    )
             else:
                 # 没有音频文件
                 raise HTTPException(
