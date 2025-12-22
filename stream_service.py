@@ -142,6 +142,8 @@ async def synthesize_streaming(
                     logger.error(f"✗ Failed to read prompt_wav audio file: {e}")
                     raise HTTPException(status_code=500, detail=f"Invalid audio file: {str(e)}")
 
+                voice16K = load_wav(temp_wav_path, 16000)  # 预加载以验证文件有效性
+
                 if instruction_text:
                     # 有 instruction - 使用 instruct2 模式 (instruction + voice)
                     logger.info(f"[{model_type}] Mode: INSTRUCT2 (instruction + voice reference)")
@@ -152,7 +154,8 @@ async def synthesize_streaming(
                     inference_method = lambda: cosyvoice.inference_instruct2(
                         text,
                         '希望你以后能够做的比我还好呦。', 
-                        './asset/zero_shot_prompt.wav',
+                        # './asset/zero_shot_prompt.wav',
+                        voice16K,
                         stream=True
                     )
                 else:
@@ -170,7 +173,8 @@ async def synthesize_streaming(
                     inference_method = lambda: cosyvoice.inference_zero_shot(
                         text, 
                         '希望你以后能够做的比我还好呦。', 
-                        './asset/zero_shot_prompt.wav',
+                        # './asset/zero_shot_prompt.wav',
+                        voice16K,
                         stream=True
                     )
             else:
