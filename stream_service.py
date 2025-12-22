@@ -27,7 +27,8 @@ model_type = type(cosyvoice).__name__
 logger.info(f"Loaded model type: {model_type}")
 
 # 默认的prompt音频文件路径和对应文本
-default_prompt_wav = "./asset/zero_shot_prompt.wav"
+# 使用绝对路径确保在任何工作目录下都能找到文件
+default_prompt_wav = "/home/ec2-user/CosyVoice/asset/zero_shot_prompt.wav"
 default_prompt_text = "希望你以后能够做的比我还好呦。"  # zero_shot_prompt.wav 的文字内容
 
 # 默认的instruction(餐馆店员场景)
@@ -175,8 +176,7 @@ async def synthesize_streaming(
                         '收到好友从远方寄来的生日礼物，那份意外的惊喜与深深的祝福让我心中充满了甜蜜的快乐，笑容如花儿般绽放。', 
                         'You are a helpful assistant.<|endofprompt|>希望你以后能够做的比我还好呦。', 
                         abs_wav_path, 
-                        stream=True,
-                        text_frontend=False
+                        stream=True
                     )
             else:
                 # 没有音频文件
