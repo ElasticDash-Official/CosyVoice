@@ -3,7 +3,6 @@ from fastapi import FastAPI, HTTPException, UploadFile, File, Form
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from cosyvoice.cli.cosyvoice import AutoModel, CosyVoice, CosyVoice2, CosyVoice3
-from cosyvoice.utils.file_utils import load_wav
 from typing import Optional
 import os
 import logging
@@ -142,8 +141,6 @@ async def synthesize_streaming(
                     logger.error(f"✗ Failed to read prompt_wav audio file: {e}")
                     raise HTTPException(status_code=500, detail=f"Invalid audio file: {str(e)}")
 
-                voice16K = load_wav(temp_wav_path, 16000)  # 预加载以验证文件有效性
-
                 if instruction_text:
                     # 有 instruction - 使用 instruct2 模式 (instruction + voice)
                     logger.info(f"[{model_type}] Mode: INSTRUCT2 (instruction + voice reference)")
@@ -153,9 +150,8 @@ async def synthesize_streaming(
                     logger.info(f"  - Voice reference: {os.path.basename(temp_wav_path)}")
                     inference_method = lambda: cosyvoice.inference_instruct2(
                         text,
-                        '希望你以后能够做的比我还好呦。', 
-                        # './asset/zero_shot_prompt.wav',
-                        voice16K,
+                        instruction_text,
+                        temp_wav_path,
                         stream=True
                     )
                 else:
@@ -170,13 +166,9 @@ async def synthesize_streaming(
                     logger.info(f"  - Voice reference: {os.path.basename(temp_wav_path)}")
                     logger.info(f"  - Voice will MATCH the prompt audio")
 
-                    inference_method = lambda: cosyvoice.inference_zero_shot(
-                        text, 
-                        '希望你以后能够做的比我还好呦。', 
-                        # './asset/zero_shot_prompt.wav',
-                        voice16K,
-                        stream=True
-                    )
+                    cosyvoice = AutoModel(model_dir='pretrained_models/CosyVoice2-0.5B')
+
+                    inference_method = lambda: cosyvoice.inference_zero_shot('收到好友从远方寄来的生日礼物，那份意外的惊喜与深深的祝福让我心中充满了甜蜜的快乐，笑容如花儿般绽放。', '希望你以后能够做的比我还好呦。', './asset/zero_shot_prompt.wav', stream=True)
             else:
                 # 没有音频文件
                 raise HTTPException(
