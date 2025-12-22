@@ -100,22 +100,33 @@ def simple_quantize(model_dir, output_dir, skip_hift=True):
             total_original += orig
             total_quantized += quant
     
-    # 复制其他文件
-    print(f"\n📋 Copying other files...")
-    other_files = [f for f in os.listdir(model_dir) 
-                   if not f.endswith('.pt') and os.path.isfile(f"{model_dir}/{f}")]
+    # 复制其他文件和目录
+    print(f"\n📋 Copying configuration files and directories...")
+    copied_files = 0
+    copied_dirs = 0
     
-    copied = 0
-    for file in other_files:
+    for item in os.listdir(model_dir):
+        src = f"{model_dir}/{item}"
+        dst = f"{output_dir}/{item}"
+        
+        # 跳过已处理的 .pt 文件
+        if item.endswith('.pt'):
+            continue
+        
         try:
-            shutil.copy(f"{model_dir}/{file}", f"{output_dir}/{file}")
-            copied += 1
-        except:
-            pass
+            if os.path.isfile(src):
+                shutil.copy(src, dst)
+                copied_files += 1
+            elif os.path.isdir(src):
+                shutil.copytree(src, dst, dirs_exist_ok=True)
+                copied_dirs += 1
+                print(f"  ✓ Copied directory: {item}")
+        except Exception as e:
+            print(f"  ⚠️  Failed to copy {item}: {e}")
     
-    if copied > 0:
-        print(f"  ✓ Copied {copied} additional file(s)")
-    else:
+    if copied_files > 0:
+        print(f"  ✓ Copied {copied_files} file(s)")
+    if copied_dirs == 0 and copied_files == 0:
         print(f"  ℹ️  No additional files to copy")
     
     # 创建标记文件
