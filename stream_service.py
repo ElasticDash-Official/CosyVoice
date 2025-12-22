@@ -93,14 +93,10 @@ async def synthesize_streaming(
 
         # CosyVoice2/3 - 支持多种推理模式
         if isinstance(cosyvoice, (CosyVoice2, CosyVoice3)):
-            # 对于 CosyVoice2/3, instruction 是必需的
-            # 如果用户不提供,使用中性instruction进行声音克隆
-            if instruction:
-                instruction_text = instruction
-            else:
-                # 中性instruction - 用于纯声音克隆
-                instruction_text = "请用这个声音说话。<|endofprompt|>"
-                logger.info("No instruction provided, using neutral instruction for voice cloning")
+            # instruction 是可选的
+            # 有 instruction → 使用 instruct2 (控制风格)
+            # 无 instruction → 使用 cross_lingual (纯声音克隆)
+            instruction_text = instruction if instruction else None
 
             # 处理prompt_wav文件 (可选)
             temp_wav_path = None
@@ -128,8 +124,6 @@ async def synthesize_streaming(
                 logger.warning(f"  - Current working directory: {os.getcwd()}")
                 logger.warning("Synthesis will fail - CosyVoice2 requires a voice reference audio")
 
-            logger.info(f"[{model_type}] Synthesizing with instruction: {instruction_text}")
-
             # 根据参数选择推理方法
             if temp_wav_path:
                 # 验证音频文件可以被读取
@@ -145,19 +139,31 @@ async def synthesize_streaming(
                     logger.error(f"✗ Failed to read prompt_wav audio file: {e}")
                     raise HTTPException(status_code=500, detail=f"Invalid audio file: {str(e)}")
 
-                # 使用 instruct2 模式 (instruction + voice reference)
-                logger.info("→ Using inference_instruct2")
-                logger.info(f"  - Text: '{text[:50]}...' (len={len(text)})")
-                if not instruction:
-                    logger.info(f"  - Using NEUTRAL instruction for voice cloning")
-                logger.info(f"  - Instruction: '{instruction_text[:80]}...'")
-                logger.info(f"  - Voice reference: {os.path.basename(temp_wav_path)}")
-                inference_method = lambda: cosyvoice.inference_instruct2(
-                    text,
-                    instruction_text,
-                    temp_wav_path,
-                    stream=True
-                )
+                if instruction_text:
+                    # 有 instruction - 使用 instruct2 模式 (instruction + voice)
+                    logger.info(f"[{model_type}] Mode: INSTRUCT2 (instruction + voice reference)")
+                    logger.info(f"  → Using inference_instruct2")
+                    logger.info(f"  - Text: '{text[:50]}...' (len={len(text)})")
+                    logger.info(f"  - Instruction: '{instruction_text[:80]}...'")
+                    logger.info(f"  - Voice reference: {os.path.basename(temp_wav_path)}")
+                    inference_method = lambda: cosyvoice.inference_instruct2(
+                        text,
+                        instruction_text,
+                        temp_wav_path,
+                        stream=True
+                    )
+                else:
+                    # 无 instruction - 使用 cross_lingual 模式 (纯声音克隆)
+                    logger.info(f"[{model_type}] Mode: CROSS_LINGUAL (voice cloning only)")
+                    logger.info(f"  → Using inference_cross_lingual for pure voice cloning")
+                    logger.info(f"  - Text: '{text[:50]}...' (len={len(text)})")
+                    logger.info(f"  - Voice will MATCH the prompt audio directly")
+                    logger.info(f"  - Voice reference: {os.path.basename(temp_wav_path)}")
+                    inference_method = lambda: cosyvoice.inference_cross_lingual(
+                        text,
+                        temp_wav_path,
+                        stream=True
+                    )
             else:
                 # 没有音频文件
                 raise HTTPException(
