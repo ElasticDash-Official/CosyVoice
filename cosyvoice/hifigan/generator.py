@@ -730,7 +730,7 @@ if __name__ == '__main__':
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
     from hyperpyyaml import load_hyperpyyaml
-    with open('./pretrained_models/Fun-CosyVoice3-0.5B/cosyvoice3.yaml', 'r') as f:
+    with open('./pretrained_models/Fun-CosyVoice3-0.5B-2512/cosyvoice3.yaml', 'r') as f:
         configs = load_hyperpyyaml(f, overrides={'llm': None, 'flow': None})
     model = configs['hift']
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
