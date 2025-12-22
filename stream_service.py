@@ -26,8 +26,9 @@ cosyvoice = AutoModel(model_dir=model_dir)
 model_type = type(cosyvoice).__name__
 logger.info(f"Loaded model type: {model_type}")
 
-# 默认的prompt音频文件路径
+# 默认的prompt音频文件路径和对应文本
 default_prompt_wav = "./asset/zero_shot_prompt.wav"
+default_prompt_text = "希望你以后能够做的比我还好呦。"  # zero_shot_prompt.wav 的文字内容
 
 # 默认的instruction(餐馆店员场景)
 default_instruction = "你是一位热情友好的餐馆店员,说话温柔亲切,语气礼貌专业。<|endofprompt|>"
@@ -93,9 +94,10 @@ async def synthesize_streaming(
 
         # CosyVoice2/3 - 支持多种推理模式
         if isinstance(cosyvoice, (CosyVoice2, CosyVoice3)):
-            # instruction 是可选的
-            # 有 instruction → 使用 instruct2 (控制风格)
-            # 无 instruction → 使用 cross_lingual (纯声音克隆)
+            # 推理模式选择:
+            # 有 instruction → 使用 instruct2 (指令控制风格)
+            # 无 instruction → 使用 zero_shot (纯声音克隆,需要 prompt_text)
+            # cross_lingual 用于细粒度控制 ([laughter], [breath] 等标记)
             instruction_text = instruction if instruction else None
 
             # 处理prompt_wav文件 (可选)
@@ -153,14 +155,20 @@ async def synthesize_streaming(
                         stream=True
                     )
                 else:
-                    # 无 instruction - 使用 cross_lingual 模式 (纯声音克隆)
-                    logger.info(f"[{model_type}] Mode: CROSS_LINGUAL (voice cloning only)")
-                    logger.info(f"  → Using inference_cross_lingual for pure voice cloning")
+                    # 无 instruction - 使用 zero_shot 模式 (纯声音克隆)
+                    # 需要 prompt_text (音频文件的文字内容)
+                    actual_prompt_text = prompt_text if prompt_text else default_prompt_text
+
+                    logger.info(f"[{model_type}] Mode: ZERO_SHOT (voice cloning)")
+                    logger.info(f"  → Using inference_zero_shot for voice cloning")
                     logger.info(f"  - Text: '{text[:50]}...' (len={len(text)})")
-                    logger.info(f"  - Voice will MATCH the prompt audio directly")
+                    logger.info(f"  - Prompt text: '{actual_prompt_text}'")
                     logger.info(f"  - Voice reference: {os.path.basename(temp_wav_path)}")
-                    inference_method = lambda: cosyvoice.inference_cross_lingual(
+                    logger.info(f"  - Voice will MATCH the prompt audio")
+
+                    inference_method = lambda: cosyvoice.inference_zero_shot(
                         text,
+                        actual_prompt_text,
                         temp_wav_path,
                         stream=True
                     )
