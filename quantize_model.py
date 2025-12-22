@@ -29,12 +29,14 @@ def quantize_dynamic(model_dir, output_dir, skip_hift=True):
     """
     print(f"🔧 Loading model from: {model_dir}")
     
-    # 检查模型文件
-    required_files = ['llm.pt', 'flow.pt', 'hift.pt', 'cosyvoice.yaml']
+    # 检查必需的模型权重文件
+    required_files = ['llm.pt', 'flow.pt', 'hift.pt']
     for f in required_files:
         if not os.path.exists(f"{model_dir}/{f}"):
             print(f"❌ Error: {f} not found in {model_dir}")
             return False
+    
+    print("✓ Found all required model files")
     
     # 加载模型权重
     print("📦 Loading model weights...")
@@ -79,16 +81,28 @@ def quantize_dynamic(model_dir, output_dir, skip_hift=True):
         torch.save(hift_quantized, f"{output_dir}/hift.pt")
     print(f"  ✓ HiFi-GAN saved: {print_model_info(f'{output_dir}/hift.pt'):.1f} MB")
     
-    # 复制配置文件
+    # 复制配置文件（可选文件）
     print("📋 Copying configuration files...")
-    config_files = ['cosyvoice.yaml', 'campplus.onnx', 'speech_tokenizer_v1.onnx', 
-                   'spk2info.pt']
-    for f in config_files:
+    optional_files = ['cosyvoice.yaml', 'campplus.onnx', 'speech_tokenizer_v1.onnx', 
+                      'spk2info.pt', 'configuration.json', 'README.md']
+    copied_count = 0
+    for f in optional_files:
         src = f"{model_dir}/{f}"
         dst = f"{output_dir}/{f}"
         if os.path.exists(src):
             shutil.copy(src, dst)
             print(f"  ✓ Copied {f}")
+            copied_count += 1
+    
+    if copied_count == 0:
+        print("  ⚠️  No configuration files found (this is OK for some model formats)")
+    
+    # 创建一个标记文件说明这是量化模型
+    with open(f"{output_dir}/QUANTIZED.txt", 'w') as f:
+        f.write("This is a quantized (FP16) version of the CosyVoice model.\n")
+        f.write(f"Original model: {model_dir}\n")
+        f.write(f"Quantized on: {__import__('datetime').datetime.now()}\n")
+        f.write(f"HiFi-GAN quantized: {not skip_hift}\n")
     
     # 计算压缩比
     quantized_sizes = {
@@ -117,10 +131,18 @@ def quantize_dynamic(model_dir, output_dir, skip_hift=True):
     print(f"\n✅ Quantization complete!")
     print(f"📁 Quantized model saved to: {output_dir}")
     print(f"\n💡 To use the quantized model:")
-    print(f"   1. Update model_dir in stream_service.py:")
+    print(f"   Method 1 - Environment variable (Recommended):")
+    print(f"      export COSYVOICE_FP16=true")
+    print(f"      export COSYVOICE_QUANTIZED=true")
+    print(f"      python stream_service.py")
+    print(f"")
+    print(f"   Method 2 - Direct path in code:")
     print(f"      model_dir = '{output_dir}'")
-    print(f"   2. Add fp16=True when loading:")
     print(f"      cosyvoice = AutoModel(model_dir=model_dir, fp16=True)")
+    print(f"")
+    print(f"   Method 3 - High-performance start:")
+    print(f"      export COSYVOICE_QUANTIZED=true")
+    print(f"      ./start_fast.sh")
     
     return True
 

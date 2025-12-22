@@ -26,11 +26,11 @@ if [ -d "$QUANTIZED_DIR" ]; then
     echo
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         echo "🔧 开始量化模型..."
-        python quantize_model.py "$MODEL_DIR" "$QUANTIZED_DIR"
+        python simple_quantize.py "$MODEL_DIR" "$QUANTIZED_DIR"
     fi
 else
     echo "🔧 开始量化模型..."
-    python quantize_model.py "$MODEL_DIR" "$QUANTIZED_DIR"
+    python simple_quantize.py "$MODEL_DIR" "$QUANTIZED_DIR"
 fi
 
 echo ""

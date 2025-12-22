@@ -28,8 +28,8 @@ python stream_service.py
 
 ### 启用量化模型（最快）
 ```bash
-# 1. 量化模型
-python quantize_model.py \
+# 1. 量化模型（使用简化版工具，无需配置文件）
+python simple_quantize.py \
   pretrained_models/Fun-CosyVoice3-0.5B-2512 \
   pretrained_models/Fun-CosyVoice3-0.5B-2512-quantized
 
@@ -39,6 +39,8 @@ export COSYVOICE_QUANTIZED=true
 ./start_fast.sh
 ```
 **速度提升：2-3x，音质：95-98%**
+
+**注意：** 如果模型目录没有 `cosyvoice.yaml`，使用 `simple_quantize.py` 而不是 `quantize_model.py`
 
 ---
 
