@@ -104,22 +104,46 @@ async def synthesize_streaming(
                     content = await prompt_wav.read()
                     temp_file.write(content)
                     temp_wav_path = temp_file.name
-                logger.info(f"Using uploaded prompt_wav: {temp_wav_path}")
+                file_size = os.path.getsize(temp_wav_path)
+                logger.info(f"✓ Using uploaded prompt_wav: {temp_wav_path} (size: {file_size} bytes)")
             elif os.path.exists(default_prompt_wav):
                 # 使用默认音频文件
                 temp_wav_path = default_prompt_wav
-                logger.info(f"Using default prompt_wav: {temp_wav_path}")
+                abs_path = os.path.abspath(temp_wav_path)
+                file_size = os.path.getsize(temp_wav_path)
+                logger.info(f"✓ Using DEFAULT prompt_wav: {abs_path}")
+                logger.info(f"  - File size: {file_size} bytes ({file_size/1024:.1f} KB)")
+                logger.info(f"  - This audio will be used as the BASE VOICE for synthesis")
             else:
                 # 没有音频文件,仅使用 instruction
-                logger.warning(f"No prompt_wav provided and default file not found at {default_prompt_wav}")
-                logger.warning("Synthesis will use instruction only without voice reference")
+                abs_path = os.path.abspath(default_prompt_wav)
+                logger.warning(f"✗ No prompt_wav provided and default file not found!")
+                logger.warning(f"  - Expected path: {abs_path}")
+                logger.warning(f"  - Current working directory: {os.getcwd()}")
+                logger.warning("Synthesis will fail - CosyVoice2 requires a voice reference audio")
 
             logger.info(f"[{model_type}] Synthesizing with instruction: {instruction_text}")
 
             # 根据参数选择推理方法
             if instruction_text and temp_wav_path:
+                # 验证音频文件可以被读取
+                try:
+                    import soundfile as sf
+                    audio_info = sf.info(temp_wav_path)
+                    logger.info(f"✓ Verified prompt_wav audio properties:")
+                    logger.info(f"  - Sample rate: {audio_info.samplerate} Hz")
+                    logger.info(f"  - Duration: {audio_info.duration:.2f} seconds")
+                    logger.info(f"  - Channels: {audio_info.channels}")
+                    logger.info(f"  - Format: {audio_info.format}")
+                except Exception as e:
+                    logger.error(f"✗ Failed to read prompt_wav audio file: {e}")
+                    raise HTTPException(status_code=500, detail=f"Invalid audio file: {str(e)}")
+
                 # 有 instruction 和音频文件 - 使用 instruct2 模式
-                logger.info("Using inference_instruct2 with prompt_wav")
+                logger.info("→ Using inference_instruct2 (instruction + voice reference)")
+                logger.info(f"  - Text: '{text[:50]}...' (len={len(text)})")
+                logger.info(f"  - Instruction: '{instruction_text[:80]}...'")
+                logger.info(f"  - Voice reference: {os.path.basename(temp_wav_path)}")
                 inference_method = lambda: cosyvoice.inference_instruct2(
                     text,
                     instruction_text,
