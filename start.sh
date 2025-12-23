@@ -20,9 +20,15 @@ export CUDA_LAUNCH_BLOCKING=0
 
 cd /home/ec2-user/CosyVoice
 
-# 单进程 uvicorn，避免主/子进程各持一份模型
-exec uvicorn stream_service:app \
-  --host 0.0.0.0 \
-  --port 50000 \
-  --timeout-keep-alive 300 \
+# gunicorn 多 worker 模式：2 个 worker 并行处理请求
+exec gunicorn stream_service:app \
+  --bind 0.0.0.0:50000 \
+  --workers 2 \
+  --worker-class uvicorn.workers.UvicornWorker \
+  --timeout 300 \
+  --worker-connections 1000 \
+  --max-requests 100 \
+  --max-requests-jitter 10 \
+  --access-logfile - \
+  --error-logfile - \
   --log-level warning

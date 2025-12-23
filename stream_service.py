@@ -43,19 +43,19 @@ USE_FP16 = os.getenv('COSYVOICE_FP16', 'true').lower() == 'true'
 USE_QUANTIZED = os.getenv('COSYVOICE_QUANTIZED', 'true').lower() == 'true'  # 默认启用量化
 
 if USE_QUANTIZED:
-    # 自动查找量化模型目录
-    quantized_dir = model_dir.rstrip('/') + '-quantized'
-    if os.path.exists(quantized_dir):
-        model_dir = quantized_dir
-        logger.warning(f"✅ Using quantized model: {model_dir}")
+    # 自动查找量化模型目录（优先级：FP16 > 原始）
+    fp16_dir = model_dir.rstrip('/') + '-quantized'
+    
+    if os.path.exists(fp16_dir):
+        model_dir = fp16_dir
+        print(f"✅ Using FP16 quantized model: {model_dir}")
     else:
-        logger.warning(f"⚠️  Quantized model not found at {quantized_dir}")
-        logger.warning(f"    Using original model (will be slower)")
-        logger.warning(f"    Create quantized model: python quantize_model.py --model_dir {model_dir}")
+        print(f"⚠️  Quantized model not found at {fp16_dir}")
+        print(f"    Using original model (will be slower)")
 
-logger.warning(f"📂 Loading model from: {model_dir}")
-logger.warning(f"⚙️  FP16 enabled: {USE_FP16}")
-logger.warning(f"⚙️  Quantized enabled: {USE_QUANTIZED}")
+print(f"📂 Loading model from: {model_dir}")
+print(f"⚙️  FP16 enabled: {USE_FP16}")
+print(f"⚙️  Quantized enabled: {USE_QUANTIZED}")
 
 cosyvoice = AutoModel(model_dir=model_dir, fp16=USE_FP16)
 
