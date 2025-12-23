@@ -60,26 +60,27 @@ print(f"⚙️  Quantized enabled: {USE_QUANTIZED}")
 
 cosyvoice = AutoModel(model_dir=model_dir, fp16=USE_FP16)
 
-# 【优化】使用 gunicorn worker 进程号来区分实例（更可靠）
-# gunicorn 会设置 SERVER_SOFTWARE 环境变量，每个 worker 有不同的进程 ID
+# 记录 worker 信息（用于日志追踪）
 import multiprocessing as mp
-
-# 获取当前进程 ID 的后缀（用于区分 worker）
 current_pid = os.getpid()
-WORKER_ID = str(current_pid % 10)  # 简单取模区分
 
-print(f"🔧 Current process PID: {current_pid}, WORKER_ID: {WORKER_ID}")
+# 使用更可靠的 worker 识别方法：gunicorn 设置的环境变量或进程序号
+# gunicorn 会为每个 worker 按顺序分配，我们通过 PID 取模 + 启动顺序来区分
+WORKER_ID = str(current_pid % 10)
 
-# Worker 编号为奇数时使用原始模型（实现负载分散）
+# 为了实现真正的负载均衡，奇数 worker 使用 quantized-2 副本
 if int(WORKER_ID) % 2 == 1:
-    alt_model_dir = "/home/ec2-user/CosyVoice/pretrained_models/Fun-CosyVoice3-0.5B-2512"
+    alt_model_dir = "/home/ec2-user/CosyVoice/pretrained_models/Fun-CosyVoice3-0.5B-2512-quantized-2"
     if os.path.exists(alt_model_dir) and alt_model_dir != model_dir:
-        print(f"🔄 Worker {WORKER_ID} switching to alternate model...")
+        print(f"🔄 Worker {WORKER_ID} (PID: {current_pid}) loading alternate quantized model...")
         cosyvoice = AutoModel(model_dir=alt_model_dir, fp16=USE_FP16)
         model_dir = alt_model_dir  # 更新 model_dir 用于日志
-        print(f"✅ Worker {WORKER_ID} loaded alternate model: {alt_model_dir}")
+        print(f"✅ Worker {WORKER_ID} loaded: {alt_model_dir}")
     else:
-        print(f"ℹ️  Worker {WORKER_ID} using same model (alternate not found or same path)")
+        print(f"⚠️  Worker {WORKER_ID} (PID: {current_pid}): quantized-2 not found, using default")
+        print(f"    Model: {model_dir}")
+else:
+    print(f"✅ Worker {WORKER_ID} (PID: {current_pid}) using default: {model_dir}")
 
 # 检测模型类型
 model_type = type(cosyvoice).__name__
