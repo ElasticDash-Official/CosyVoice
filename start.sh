@@ -32,7 +32,7 @@ cd /home/ec2-user/CosyVoice
 
 exec gunicorn stream_service:app \
   --bind 0.0.0.0:50000 \
-  --workers 4 \
+  --workers 2 \
   --worker-class uvicorn.workers.UvicornWorker \
   --timeout 300 \
   --worker-connections 1000 \
