@@ -10,6 +10,7 @@ import tempfile
 import soundfile as sf
 import numpy as np
 import io
+import time
 from functools import lru_cache
 
 # 配置日志 - 生产环境使用WARNING级别减少开销
@@ -175,6 +176,17 @@ async def synthesize_streaming(
             # cross_lingual 用于细粒度控制 ([laughter], [breath] 等标记)
             instruction_text = instruction if instruction else None
 
+            # 记录开始时间和模型信息
+            start_ts = time.perf_counter()
+            logger.warning(
+                "[TTS] start worker=%s model=%s dir=%s text_len=%d instr=%s",
+                WORKER_ID,
+                model_type,
+                model_dir,
+                len(text),
+                bool(instruction_text),
+            )
+
             # 处理prompt_wav文件 (可选) - 优化版本
             temp_wav_path = None
             if prompt_wav:
@@ -238,10 +250,13 @@ async def synthesize_streaming(
                 )
 
             async def audio_stream():
+                total_samples = 0
+                sample_rate = getattr(cosyvoice, "sample_rate", 24000)
                 try:
                     for result in inference_method():
                         # 优化：直接处理tensor，减少转换开销
                         audio_chunk = result["tts_speech"].squeeze().cpu().numpy()
+                        total_samples += audio_chunk.shape[0]
                         # 返回 Float32 PCM 数据（采样率 24000 Hz）
                         yield audio_chunk.tobytes()
                 finally:
@@ -251,6 +266,20 @@ async def synthesize_streaming(
                             os.unlink(temp_wav_path)
                         except:
                             pass
+
+                    wall = time.perf_counter() - start_ts
+                    audio_sec = total_samples / float(sample_rate) if total_samples else 0.0
+                    rtf = wall / audio_sec if audio_sec > 0 else 0.0
+                    logger.warning(
+                        "[TTS] done worker=%s model=%s dir=%s wall=%.2fs audio=%.2fs rtf=%.3f text_len=%d",
+                        WORKER_ID,
+                        model_type,
+                        model_dir,
+                        wall,
+                        audio_sec,
+                        rtf,
+                        len(text),
+                    )
 
             return StreamingResponse(audio_stream(), media_type="audio/wav")
 
