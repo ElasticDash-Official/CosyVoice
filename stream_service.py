@@ -59,6 +59,16 @@ print(f"⚙️  Quantized enabled: {USE_QUANTIZED}")
 
 cosyvoice = AutoModel(model_dir=model_dir, fp16=USE_FP16)
 
+# 【新增】如果有第二个模型，也加载（用于多实例推理）
+# 每个 worker 可以使用不同的模型实例避免竞争
+WORKER_ID = os.getenv('WORKER_ID', '0')
+if WORKER_ID == '1':
+    # Worker 1 用原始模型
+    alt_model_dir = "/home/ec2-user/CosyVoice/pretrained_models/Fun-CosyVoice3-0.5B-2512"
+    if os.path.exists(alt_model_dir):
+        cosyvoice = AutoModel(model_dir=alt_model_dir, fp16=USE_FP16)
+        print(f"✅ Worker {WORKER_ID} loaded alternate model: {alt_model_dir}")
+
 # 检测模型类型
 model_type = type(cosyvoice).__name__
 logger.warning(f"Loaded model type: {model_type}")

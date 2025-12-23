@@ -12,7 +12,8 @@ conda activate cosyvoice
 export CUDA_VISIBLE_DEVICES=0
 export PYTORCH_NO_MMAP=1
 export MALLOC_ARENA_MAX=4
-export PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:512
+export PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:512,expandable_segments:True
+export TORCH_CUDA_MEMORY_FRACTION=0.45  # 限制每个 worker 最多占用 45% 显存（~6.9GB）
 export COSYVOICE_FP16=true
 export COSYVOICE_QUANTIZED=true
 export COSYVOICE_COMPILE=false
@@ -20,7 +21,7 @@ export CUDA_LAUNCH_BLOCKING=0
 
 cd /home/ec2-user/CosyVoice
 
-# gunicorn 多 worker 模式：2 个 worker 并行处理请求（GPU 显存限制）
+# gunicorn 多 worker 模式：2 个 worker，各自独立加载模型实例（真正并行）
 exec gunicorn stream_service:app \
   --bind 0.0.0.0:50000 \
   --workers 2 \
