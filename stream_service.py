@@ -47,13 +47,15 @@ if USE_QUANTIZED:
     quantized_dir = model_dir.rstrip('/') + '-quantized'
     if os.path.exists(quantized_dir):
         model_dir = quantized_dir
-        logger.warning(f"Using quantized model: {model_dir}")
+        logger.warning(f"✅ Using quantized model: {model_dir}")
     else:
-        logger.warning(f"Quantized model not found at {quantized_dir}, using original model")
+        logger.warning(f"⚠️  Quantized model not found at {quantized_dir}")
+        logger.warning(f"    Using original model (will be slower)")
+        logger.warning(f"    Create quantized model: python quantize_model.py --model_dir {model_dir}")
 
-logger.warning(f"Loading model from: {model_dir}")
-logger.warning(f"FP16 enabled: {USE_FP16}")
-logger.warning(f"Quantized enabled: {USE_QUANTIZED}")
+logger.warning(f"📂 Loading model from: {model_dir}")
+logger.warning(f"⚙️  FP16 enabled: {USE_FP16}")
+logger.warning(f"⚙️  Quantized enabled: {USE_QUANTIZED}")
 
 cosyvoice = AutoModel(model_dir=model_dir, fp16=USE_FP16)
 
@@ -79,7 +81,7 @@ if USE_COMPILE and hasattr(torch, 'compile'):
 # default_prompt_text = "希望你以后能够做的比我还好呦。"  # zero_shot_prompt.wav 的文字内容
 
 default_prompt_wav = "/home/ec2-user/CosyVoice/asset/paimon_prompt.wav"
-default_prompt_text = "等等，算起来…今天是不是就是连续打工的第三天了？现在正是午饭时间！"  # zero_shot_prompt.wav 的文字内容
+default_prompt_text = "等等，算起来…今天是不是就是连续打工的第三天了？现在正是午饭时间！"  # paimon_prompt.wav 的文字内容
 
 # 默认的instruction(餐馆店员场景)
 default_instruction = "你是一位热情友好的餐馆店员,说话温柔亲切,语气礼貌专业。<|endofprompt|>"

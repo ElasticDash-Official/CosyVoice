@@ -27,6 +27,17 @@ export CUDA_LAUNCH_BLOCKING=0
 
 cd /home/ec2-user/CosyVoice
 
-# ❗ 核心：stdout / stderr 都交给 systemd journald 管理
-# 不再手动写日志文件，避免无限增长
-exec python stream_service.py
+# ❗ 核心：使用 gunicorn 多 worker 实现真正并行
+# -w 4: 4个worker进程 (根据GPU内存调整)
+# -k uvicorn.workers.UvicornWorker: 使用异步worker
+# --timeout 300: 增加超时时间
+# --worker-connections 1000: 每个worker的连接数
+exec gunicorn stream_service:app \
+  --bind 0.0.0.0:50000 \
+  --workers 4 \
+  --worker-class uvicorn.workers.UvicornWorker \
+  --timeout 300 \
+  --worker-connections 1000 \
+  --access-logfile - \
+  --error-logfile - \
+  --log-level warning
