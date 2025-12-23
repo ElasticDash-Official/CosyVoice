@@ -20,10 +20,10 @@ export CUDA_LAUNCH_BLOCKING=0
 
 cd /home/ec2-user/CosyVoice
 
-# gunicorn 多 worker 模式：2 个 worker 并行处理请求（32GB 内存足够）
+# gunicorn 多 worker 模式：3 个 worker 并行处理请求（32GB 内存足够）
 exec gunicorn stream_service:app \
   --bind 0.0.0.0:50000 \
-  --workers 2 \
+  --workers 3 \
   --worker-class uvicorn.workers.UvicornWorker \
   --timeout 300 \
   --worker-connections 1000 \
