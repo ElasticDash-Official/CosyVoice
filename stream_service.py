@@ -16,6 +16,11 @@ from functools import lru_cache
 logging.basicConfig(level=logging.WARNING)
 logger = logging.getLogger(__name__)
 
+# 抑制第三方库的警告
+import warnings
+warnings.filterwarnings('ignore', category=FutureWarning)
+warnings.filterwarnings('ignore', message='.*weight_norm.*')
+
 # 初始化 FastAPI 应用
 app = FastAPI()
 
