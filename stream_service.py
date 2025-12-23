@@ -29,6 +29,9 @@ import torch
 if torch.cuda.is_available():
     torch.backends.cudnn.benchmark = True  # 自动选择最优卷积算法
     torch.set_float32_matmul_precision('high')  # 使用TF32精度加速
+    # 启用 CUDA 图优化（减少kernel启动开销）
+    torch.backends.cuda.matmul.allow_tf32 = True
+    torch.backends.cudnn.allow_tf32 = True
 
 # 初始化 CosyVoice 模型
 # model_dir = "/home/ec2-user/CosyVoice/pretrained_models/CosyVoice2-0.5B"
@@ -37,7 +40,7 @@ model_dir = "/home/ec2-user/CosyVoice/pretrained_models/Fun-CosyVoice3-0.5B-2512
 
 # 性能优化：支持通过环境变量启用 FP16 和量化模型
 USE_FP16 = os.getenv('COSYVOICE_FP16', 'true').lower() == 'true'
-USE_QUANTIZED = os.getenv('COSYVOICE_QUANTIZED', 'false').lower() == 'true'
+USE_QUANTIZED = os.getenv('COSYVOICE_QUANTIZED', 'true').lower() == 'true'  # 默认启用量化
 
 if USE_QUANTIZED:
     # 自动查找量化模型目录
@@ -50,12 +53,25 @@ if USE_QUANTIZED:
 
 logger.warning(f"Loading model from: {model_dir}")
 logger.warning(f"FP16 enabled: {USE_FP16}")
+logger.warning(f"Quantized enabled: {USE_QUANTIZED}")
 
 cosyvoice = AutoModel(model_dir=model_dir, fp16=USE_FP16)
 
 # 检测模型类型
 model_type = type(cosyvoice).__name__
-logger.info(f"Loaded model type: {model_type}")
+logger.warning(f"Loaded model type: {model_type}")
+
+# 可选：torch.compile加速（PyTorch 2.0+，首次推理会慢，后续会快）
+USE_COMPILE = os.getenv('COSYVOICE_COMPILE', 'false').lower() == 'true'
+if USE_COMPILE and hasattr(torch, 'compile'):
+    try:
+        logger.warning("Applying torch.compile optimization...")
+        # 编译模型的关键部分（如果支持）
+        if hasattr(cosyvoice, 'model'):
+            cosyvoice.model.llm = torch.compile(cosyvoice.model.llm, mode='reduce-overhead')
+        logger.warning("torch.compile applied successfully")
+    except Exception as e:
+        logger.warning(f"torch.compile failed: {e}")
 
 # 默认的prompt音频文件路径和对应文本
 # 使用绝对路径确保在任何工作目录下都能找到文件
@@ -342,12 +358,18 @@ async def health_check():
 
 if __name__ == "__main__":
     import uvicorn
+    import multiprocessing
+    
+    # 根据GPU数量和内存自动调整worker数 (每个worker会加载一次模型)
+    # GPU内存充足时可增加到4-8个worker
+    num_workers = min(4, max(1, multiprocessing.cpu_count() // 2))
+    
     uvicorn.run(
         app,
         host="0.0.0.0",
         port=50000,
-        workers=1,              # 单进程避免内存重复加载模型
-        limit_concurrency=20,   # 增加并发连接数
+        workers=num_workers,    # 多进程并行处理请求
+        limit_concurrency=50,   # 增加并发连接数
         timeout_keep_alive=30,  # 30秒keepalive超时
         backlog=2048,          # 增加连接队列
         log_level="warning"     # 只记录警告和错误

@@ -17,6 +17,14 @@ export CUDA_VISIBLE_DEVICES=0
 export PYTORCH_NO_MMAP=1
 export MALLOC_ARENA_MAX=4
 
+# 性能优化环境变量
+export COSYVOICE_FP16=true
+export COSYVOICE_QUANTIZED=true
+export COSYVOICE_COMPILE=false  # 首次推理会慢，可选启用
+
+# CUDA优化
+export CUDA_LAUNCH_BLOCKING=0
+
 cd /home/ec2-user/CosyVoice
 
 # ❗ 核心：stdout / stderr 都交给 systemd journald 管理
