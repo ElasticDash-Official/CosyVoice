@@ -252,7 +252,8 @@ async def synthesize_streaming(
                     inference_method = lambda: cosyvoice.inference_zero_shot(
                         text,
                         # 'You are a helpful assistant.<|endofprompt|>' + actual_prompt_text,
-                        actual_prompt_text,
+                        # actual_prompt_text,
+                        'You are a helpful assistant.<|endofprompt|>',
                         abs_wav_path, 
                         stream=True
                     )
