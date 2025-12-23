@@ -11,7 +11,7 @@ if [ "$WORKER_COUNT" -eq 0 ]; then
     echo "❌ 服务未运行"
     echo ""
     echo "启动服务："
-    echo "  sudo systemctl start cosyvoice-stream.service"
+    echo "  sudo systemctl start stream_service"
     exit 1
 fi
 
