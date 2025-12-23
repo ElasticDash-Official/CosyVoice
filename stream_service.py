@@ -269,17 +269,15 @@ async def synthesize_streaming(
                 try:
                     for result in inference_method():
                         # 获取音频数据（Float32 格式）
-                        audio_chunk = result["tts_speech"].squeeze().cpu().numpy()
-                        total_samples += audio_chunk.shape[0]
-                        
+                        audio_chunk = result["tts_speech"].squeeze()  # 保持数据在 GPU 上
+
                         # 转换为 Int16 PCM（标准音频格式，避免杂音）
                         # Float32 范围 [-1.0, 1.0] -> Int16 范围 [-32768, 32767]
-                        audio_int16 = (audio_chunk * 32767).astype(np.int16)
-                        
-                        # 每个 chunk 都生成完整的 WAV 文件（带 header）
-                        # 这样前端可以逐块解析播放
+                        audio_int16 = (audio_chunk * 32767).to(torch.int16)
+
+                        # 将数据从 GPU 写入缓冲区（避免中间转换到 NumPy）
                         buffer = io.BytesIO()
-                        sf.write(buffer, audio_int16, sample_rate, format='WAV', subtype='PCM_16')
+                        sf.write(buffer, audio_int16.cpu().numpy(), sample_rate, format='WAV', subtype='PCM_16')
                         buffer.seek(0)
                         
                         # 发送完整的 WAV chunk
