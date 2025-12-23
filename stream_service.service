@@ -17,14 +17,14 @@ StandardError=journal
 # Python 行为
 Environment=PYTHONUNBUFFERED=1
 
-# ✅ 资源护栏（非常关键）
-MemoryMax=12G
-MemoryHigh=10G
-TasksMax=128
+# ✅ 资源护栏（32GB 总内存，4 worker 模式）
+MemoryMax=28G
+MemoryHigh=24G
+TasksMax=256
 LimitNOFILE=65536
 
 # ✅ CPU 限制，防止占满CPU
-CPUQuota=200%
+CPUQuota=400%
 
 # ✅ 更安全的重启策略
 Restart=on-failure
