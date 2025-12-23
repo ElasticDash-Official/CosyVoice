@@ -60,15 +60,26 @@ print(f"⚙️  Quantized enabled: {USE_QUANTIZED}")
 
 cosyvoice = AutoModel(model_dir=model_dir, fp16=USE_FP16)
 
-# 【新增】如果有第二个模型，也加载（用于多实例推理）
-# 每个 worker 可以使用不同的模型实例避免竞争
-WORKER_ID = os.getenv('WORKER_ID', '0')
-if WORKER_ID == '1':
-    # Worker 1 用原始模型
+# 【优化】使用 gunicorn worker 进程号来区分实例（更可靠）
+# gunicorn 会设置 SERVER_SOFTWARE 环境变量，每个 worker 有不同的进程 ID
+import multiprocessing as mp
+
+# 获取当前进程 ID 的后缀（用于区分 worker）
+current_pid = os.getpid()
+WORKER_ID = str(current_pid % 10)  # 简单取模区分
+
+print(f"🔧 Current process PID: {current_pid}, WORKER_ID: {WORKER_ID}")
+
+# Worker 编号为奇数时使用原始模型（实现负载分散）
+if int(WORKER_ID) % 2 == 1:
     alt_model_dir = "/home/ec2-user/CosyVoice/pretrained_models/Fun-CosyVoice3-0.5B-2512"
-    if os.path.exists(alt_model_dir):
+    if os.path.exists(alt_model_dir) and alt_model_dir != model_dir:
+        print(f"🔄 Worker {WORKER_ID} switching to alternate model...")
         cosyvoice = AutoModel(model_dir=alt_model_dir, fp16=USE_FP16)
+        model_dir = alt_model_dir  # 更新 model_dir 用于日志
         print(f"✅ Worker {WORKER_ID} loaded alternate model: {alt_model_dir}")
+    else:
+        print(f"ℹ️  Worker {WORKER_ID} using same model (alternate not found or same path)")
 
 # 检测模型类型
 model_type = type(cosyvoice).__name__
