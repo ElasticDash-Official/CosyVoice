@@ -3,8 +3,11 @@
 # 不要 set -e，避免 systemd 误判失败
 set -o pipefail
 
-# ⏳ 防止 boot 早期启动
-sleep 30
+# ⏳ 防止 boot 早期启动：仅在开机 < 60 秒时等待
+UPTIME_SEC=$(awk '{print int($1)}' /proc/uptime)
+if [ "$UPTIME_SEC" -lt 60 ]; then
+  sleep 30
+fi
 
 # 激活 conda
 source /home/ec2-user/miniconda3/etc/profile.d/conda.sh
@@ -27,11 +30,6 @@ export CUDA_LAUNCH_BLOCKING=0
 
 cd /home/ec2-user/CosyVoice
 
-# ❗ 核心：使用 gunicorn 多 worker 实现真正并行
-# -w 4: 4个worker进程 (根据GPU内存调整)
-# -k uvicorn.workers.UvicornWorker: 使用异步worker
-# --timeout 300: 增加超时时间
-# --worker-connections 1000: 每个worker的连接数
 exec gunicorn stream_service:app \
   --bind 0.0.0.0:50000 \
   --workers 4 \
