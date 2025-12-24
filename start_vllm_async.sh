@@ -5,10 +5,10 @@ set -euo pipefail
 # Usage:
 #   ./start_vllm_async.sh [MODEL_DIR] [PORT]
 # Defaults:
-#   MODEL_DIR=pretrained_models/CosyVoice2-0.5B
+#   MODEL_DIR=pretrained_models/CosyVoice2-0.5B-quantized
 #   PORT=8022
 
-MODEL_DIR="${1:-pretrained_models/CosyVoice2-0.5B}"
+MODEL_DIR="${1:-pretrained_models/CosyVoice2-0.5B-quantized}"
 PORT="${2:-50000}"
 
 echo "[vLLM] Starting Async CosyVoice FastAPI"
