@@ -26,7 +26,6 @@ import uuid
 from concurrent.futures import ThreadPoolExecutor
 
 from cosyvoice.flow.flow import CausalMaskedDiffWithXvec
-from cosyvoice.flow.flow_matching import EstimatorWrapper
 from cosyvoice.hifigan.generator import HiFTGenerator
 from cosyvoice.utils.common import fade_in_out
 from cosyvoice.utils.file_utils import convert_onnx_to_trt
@@ -42,6 +41,14 @@ from async_cosyvoice.config import ENGINE_ARGS, SAMPLING_PARAMS, ESTIMATOR_COUNT
 
 from async_cosyvoice.vllm_use_cosyvoice2_model import CosyVoice2Model as CosyVoice2LLM
 ModelRegistry.register_model("CosyVoice2Model", CosyVoice2LLM)
+
+
+class EstimatorWrapper:
+    """Wrapper for TensorRT estimator with multi-instance pooling"""
+    def __init__(self, estimator_engine, estimator_count=1):
+        self.estimator_engine = estimator_engine
+        self.estimator_count = estimator_count
+
 
 class AsyncWrapper:
     """将一个同步生成器包装为异步生成器"""
