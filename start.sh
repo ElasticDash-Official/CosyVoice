@@ -9,6 +9,11 @@ fi
 source /home/ec2-user/miniconda3/etc/profile.d/conda.sh
 conda activate cosyvoice
 
+# Set CUDA_HOME for DeepSpeed and CUDA compilation
+export CUDA_HOME=/usr/local/cuda
+export PATH=$CUDA_HOME/bin:$PATH
+export LD_LIBRARY_PATH=$CUDA_HOME/lib64:$LD_LIBRARY_PATH
+
 export CUDA_VISIBLE_DEVICES=0
 export PYTORCH_NO_MMAP=1
 export MALLOC_ARENA_MAX=4
