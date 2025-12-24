@@ -265,18 +265,24 @@ async def synthesize_streaming(
             async def audio_stream():
                 total_samples = 0
                 sample_rate = getattr(cosyvoice, "sample_rate", 24000)
+                chunk_count = 0
                 
                 try:
                     for result in inference_method():
                         # 获取音频数据（Float32 格式）
                         audio_chunk = result["tts_speech"].squeeze()
+                        chunk_num_samples = audio_chunk.shape[0]
+                        total_samples += chunk_num_samples
 
                         # 转换为 Int16 PCM（标准音频格式，避免杂音）
                         # Float32 范围 [-1.0, 1.0] -> Int16 范围 [-32768, 32767]
                         audio_int16 = (audio_chunk * 32767).to(torch.int16)
 
-                        # 直接传输 PCM 数据
-                        yield audio_int16.cpu().numpy().tobytes()
+                        # 直接传输 PCM 数据（流式发送）
+                        pcm_bytes = audio_int16.cpu().numpy().tobytes()
+                        chunk_count += 1
+                        logger.info(f"stream chunk={chunk_count} samples={chunk_num_samples} bytes={len(pcm_bytes)}")
+                        yield pcm_bytes
                             
                 finally:
                     # 只清理上传的临时文件
