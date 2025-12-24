@@ -35,9 +35,9 @@ if torch.cuda.is_available():
     torch.backends.cudnn.allow_tf32 = True
 
 # 初始化 CosyVoice 模型
-# model_dir = "/home/ec2-user/CosyVoice/pretrained_models/CosyVoice2-0.5B"
 # model_dir = "/home/ec2-user/CosyVoice/pretrained_models/CosyVoice-300M-SFT"
-model_dir = "/home/ec2-user/CosyVoice/pretrained_models/Fun-CosyVoice3-0.5B-2512"
+model_dir = "/home/ec2-user/CosyVoice/pretrained_models/CosyVoice2-0.5B"
+# model_dir = "/home/ec2-user/CosyVoice/pretrained_models/Fun-CosyVoice3-0.5B-2512"
 
 # 性能优化：支持通过环境变量启用 FP16 和量化模型
 USE_FP16 = os.getenv('COSYVOICE_FP16', 'true').lower() == 'true'
@@ -269,19 +269,14 @@ async def synthesize_streaming(
                 try:
                     for result in inference_method():
                         # 获取音频数据（Float32 格式）
-                        audio_chunk = result["tts_speech"].squeeze()  # 保持数据在 GPU 上
+                        audio_chunk = result["tts_speech"].squeeze()
 
                         # 转换为 Int16 PCM（标准音频格式，避免杂音）
                         # Float32 范围 [-1.0, 1.0] -> Int16 范围 [-32768, 32767]
                         audio_int16 = (audio_chunk * 32767).to(torch.int16)
 
-                        # 将数据从 GPU 写入缓冲区（避免中间转换到 NumPy）
-                        buffer = io.BytesIO()
-                        sf.write(buffer, audio_int16.cpu().numpy(), sample_rate, format='WAV', subtype='PCM_16')
-                        buffer.seek(0)
-                        
-                        # 发送完整的 WAV chunk
-                        yield buffer.read()
+                        # 直接传输 PCM 数据
+                        yield audio_int16.cpu().numpy().tobytes()
                             
                 finally:
                     # 只清理上传的临时文件
