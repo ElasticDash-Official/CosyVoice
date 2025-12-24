@@ -9,10 +9,12 @@ fi
 source /home/ec2-user/miniconda3/etc/profile.d/conda.sh
 conda activate cosyvoice
 
-# Set CUDA_HOME for DeepSpeed and CUDA compilation
-export CUDA_HOME=/usr/local/cuda
-export PATH=$CUDA_HOME/bin:$PATH
-export LD_LIBRARY_PATH=$CUDA_HOME/lib64:$LD_LIBRARY_PATH
+# Disable DeepSpeed compilation (CUDA toolkit not installed, but GPUs available)
+export DS_BUILD_AIO=0
+export DS_BUILD_SPARSE_ATTN=0
+export DS_BUILD_SPARSE_ALLREDUCE=0
+export DS_BUILD_UTILS=0
+export DS_BUILD_FUSED_LAMB=0
 
 export CUDA_VISIBLE_DEVICES=0
 export PYTORCH_NO_MMAP=1
