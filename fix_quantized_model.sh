@@ -3,8 +3,8 @@
 
 set -e
 
-ORIGINAL="/home/ec2-user/CosyVoice/pretrained_models/Fun-CosyVoice3-0.5B-2512"
-QUANTIZED="/home/ec2-user/CosyVoice/pretrained_models/Fun-CosyVoice3-0.5B-2512-quantized"
+ORIGINAL="/home/ec2-user/CosyVoice/pretrained_models/CosyVoice2-0.5B"
+QUANTIZED="/home/ec2-user/CosyVoice/pretrained_models/CosyVoice2-0.5B-quantized"
 
 echo "🔧 修复量化模型 - 复制缺失的目录"
 echo "======================================"

@@ -35,9 +35,10 @@ if torch.cuda.is_available():
     torch.backends.cudnn.allow_tf32 = True
 
 # 初始化 CosyVoice 模型
-# model_dir = "/home/ec2-user/CosyVoice/pretrained_models/CosyVoice-300M-SFT"
-model_dir = "/home/ec2-user/CosyVoice/pretrained_models/CosyVoice2-0.5B"
+model_dir = "/home/ec2-user/CosyVoice/pretrained_models/CosyVoice2-0.5B-quantized"
+alt_model_dir = "/home/ec2-user/CosyVoice/pretrained_models/CosyVoice2-0.5B-quantized-2"
 # model_dir = "/home/ec2-user/CosyVoice/pretrained_models/Fun-CosyVoice3-0.5B-2512"
+# alt_model_dir = "/home/ec2-user/CosyVoice/pretrained_models/Fun-CosyVoice3-0.5B-quantized"
 
 # 性能优化：支持通过环境变量启用 FP16 和量化模型
 USE_FP16 = os.getenv('COSYVOICE_FP16', 'true').lower() == 'true'
@@ -70,7 +71,6 @@ WORKER_ID = str(current_pid % 10)
 
 # 为了实现真正的负载均衡，奇数 worker 使用 quantized-2 副本
 if int(WORKER_ID) % 2 == 1:
-    alt_model_dir = "/home/ec2-user/CosyVoice/pretrained_models/Fun-CosyVoice3-0.5B-2512-quantized-2"
     if os.path.exists(alt_model_dir) and alt_model_dir != model_dir:
         print(f"🔄 Worker {WORKER_ID} (PID: {current_pid}) loading alternate quantized model...")
         cosyvoice = AutoModel(model_dir=alt_model_dir, fp16=USE_FP16)
