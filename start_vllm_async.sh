@@ -23,8 +23,8 @@ if command -v conda >/dev/null 2>&1; then
     source "$HOME/miniconda3/etc/profile.d/conda.sh"
   fi
   # Activate env if exists; ignore errors
-  if conda env list | awk '{print $1}' | grep -q "^cosyvoice2$"; then
-    conda activate cosyvoice2 || true
+  if conda env list | awk '{print $1}' | grep -q "^cosyvoice$"; then
+    conda activate cosyvoice || true
   fi
 fi
 
