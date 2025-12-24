@@ -59,7 +59,7 @@ print(f"📂 Loading model from: {model_dir}")
 print(f"⚙️  FP16 enabled: {USE_FP16}")
 print(f"⚙️  Quantized enabled: {USE_QUANTIZED}")
 
-cosyvoice = AutoModel(model_dir=model_dir, fp16=USE_FP16)
+cosyvoice = AutoModel(model_dir=model_dir, load_trt=True, fp16=USE_FP16)
 
 # 记录 worker 信息（用于日志追踪）
 import multiprocessing as mp
@@ -73,7 +73,7 @@ WORKER_ID = str(current_pid % 10)
 if int(WORKER_ID) % 2 == 1:
     if os.path.exists(alt_model_dir) and alt_model_dir != model_dir:
         print(f"🔄 Worker {WORKER_ID} (PID: {current_pid}) loading alternate quantized model...")
-        cosyvoice = AutoModel(model_dir=alt_model_dir, fp16=USE_FP16)
+        cosyvoice = AutoModel(model_dir=alt_model_dir, load_trt=True, fp16=USE_FP16)
         model_dir = alt_model_dir  # 更新 model_dir 用于日志
         print(f"✅ Worker {WORKER_ID} loaded: {alt_model_dir}")
     else:
