@@ -35,7 +35,7 @@ if torch.cuda.is_available():
     torch.backends.cudnn.allow_tf32 = True
 
 # 初始化 CosyVoice 模型
-model_dir = "/home/ec2-user/CosyVoice/pretrained_models/CosyVoice2-0.5B-quantized"
+model_dir = "/home/ec2-user/CosyVoice/pretrained_models/CosyVoice2-0.5B"
 alt_model_dir = "/home/ec2-user/CosyVoice/pretrained_models/CosyVoice2-0.5B-quantized-2"
 # model_dir = "/home/ec2-user/CosyVoice/pretrained_models/Fun-CosyVoice3-0.5B-2512"
 # alt_model_dir = "/home/ec2-user/CosyVoice/pretrained_models/Fun-CosyVoice3-0.5B-quantized"
